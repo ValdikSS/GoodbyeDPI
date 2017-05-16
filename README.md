@@ -11,6 +11,14 @@ It handles DPI connected using optical splitter or port mirroring (**Passive DPI
 
 Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases) and run.
 
+```
+1: block passive DPI, 2: fragment outbound, 4: replace Host with hoSt, 8: remove space between host header and value
+```
+
+Try to run `goodbyedpi.exe 13` first. This enables 1, 4 and 8 options (1+4+8 = 13).
+
+Run `goodbyedpi.exe 15` if this doesn't work. Fragmentation will cause slowdowns but it works in most cases.
+
 # How does it work
 
 ### Passive DPI
