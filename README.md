@@ -3,7 +3,7 @@ GoodbyeDPI — Passive Deep Packet Inspection blocker and Active DPI circumventi
 
 This software designed to bypass Deep Packet Inspection systems found in many Internet Service Providers which block access to certain websites.
 
-It handles DPI connected using optical splitter or port mirroring (**Passive DPI**) which do not block any data but just replying faster then requested destination, and **Active DPI** connected in sequence.
+It handles DPI connected using optical splitter or port mirroring (**Passive DPI**) which do not block any data but just replying faster than requested destination, and **Active DPI** connected in sequence.
 
 **Windows 7, 8, 8.1 and 10** with administrator privileges required.
 
@@ -23,7 +23,7 @@ Run `goodbyedpi.exe 15` if this doesn't work. Fragmentation will cause slowdowns
 
 ### Passive DPI
 
-Most Passive DPI send HTTP 301 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster then destination website. Packets sent by DPI have always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets are blocked by GoodbyeDPI.
+Most Passive DPI send HTTP 301 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster than destination website. Packets sent by DPI have always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets are blocked by GoodbyeDPI.
 
 ### Active DPI
 
