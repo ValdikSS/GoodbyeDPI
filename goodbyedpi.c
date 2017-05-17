@@ -12,7 +12,7 @@
 
 #define die() do { printf("Something went wrong!\n" \
     "Make sure you're running this program with administrator privileges\n"); \
-    sleep(10); exit(1); } while (0)
+    sleep(10); exit(EXIT_FAILURE); } while (0)
 
 #define MAX_FILTERS 4
 #define MAX_PACKET_SIZE 1516
@@ -66,7 +66,7 @@ static void deinit_all() {
 
 static void sigint_handler(int sig) {
     deinit_all();
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 static int find_passivedpi_redirect(char *pktdata) {
