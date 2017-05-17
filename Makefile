@@ -1,8 +1,12 @@
+CPREFIX = x86_64-w64-mingw32
+WINDIVERTHEADERS = ../../include
+WINDIVERTLIBS = ../binary
+
 TARGET = goodbyedpi.exe
-LIBS = -L ../binary -lWinDivert -lws2_32
-CC = x86_64-w64-mingw32-gcc
-CCWINDRES = x86_64-w64-mingw32-windres
-CFLAGS = -Wall -I ../../include -L ../binary -O2
+LIBS = -L $(WINDIVERTLIBS) -lWinDivert -lws2_32
+CC = $(CPREFIX)-gcc
+CCWINDRES = $(CPREFIX)-windres
+CFLAGS = -Wall -I $(WINDIVERTHEADERS) -L $(WINDIVERTLIBS) -O2
 
 .PHONY: default all clean
 

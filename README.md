@@ -35,6 +35,20 @@ Active DPI is more tricky to fool. Currently the software uses 3 methods to circ
 
 These methods do not break any website as are fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship.
 
+The program loads WinDivert driver which uses Windows Filtering Platform to set filters and redirect packets to the userspace. It's running as long as console window is visible and terminates when you close the window.
+
+# How to build from source
+
+This project can be build using **GNU Make** and [**mingw**](https://mingw-w64.org). The only dependency is [WinDivert](https://github.com/basil00/Divert).
+
+To build x86 exe run:
+
+`make CPREFIX=i686-w64-mingw32 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/x86`
+
+And for x86_64:
+
+`make CPREFIX=x86_64-w64-mingw32 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
+
 # Similar projects
 
 [zapret](https://github.com/bol-van/zapret) by @bol-van (for Linux).
