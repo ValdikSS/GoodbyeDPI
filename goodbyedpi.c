@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
             = do_fragment_http = do_fragment_https = 1;
     }
 
-    while ((opt = getopt(argc, argv, "123prsf:e:")) != -1) {
+    while ((opt = getopt(argc, argv, "1234prsf:e:")) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
