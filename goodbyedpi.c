@@ -80,13 +80,15 @@ static PVOID find_host_header(char *pktdata, int pktlen) {
                 (char*)http_host_find, strlen(http_host_find));
 }
 
-static void change_window_size(char *pkt) {
-    *(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = 0x00;
-    *(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET + 1) = 0x02;
+static void change_window_size(char *pkt, int size) {
+    *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
 }
 
 int main(int argc, char *argv[]) {
+    static const char fragment_size_message[] =
+                "Fragment size should be in range [0 - 65535]\n";
     int i, should_reinject = 0;
+    int opt;
     HANDLE w_filter = NULL;
     WINDIVERT_ADDRESS addr;
     char packet[MAX_PACKET_SIZE];
@@ -96,35 +98,83 @@ int main(int argc, char *argv[]) {
     PWINDIVERT_IPHDR ppIpHdr;
     PWINDIVERT_TCPHDR ppTcpHdr;
 
-    int do_passivedpi, do_fragment, do_host, do_host_removespace;
-    int temp;
-    char *data_addr, *data_addr_rn, *host_addr = NULL;
+    int do_passivedpi = 0, do_fragment_http = 0,
+        do_fragment_https = 0, do_host = 0,
+        do_host_removespace = 0;
+    int http_fragment_size = 2;
+    int https_fragment_size = 2;
+    char *data_addr, *data_addr_rn, *host_addr;
     int host_len, fromhost_uptoend_len;
 
-    printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n\n");
+    printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
-    if (argc == 2) {
-        temp = atoi(argv[1]);
-        do_passivedpi = !!(temp & 1);
-        do_fragment = !!(temp & 2);
-        do_host = !!(temp & 4);
-        do_host_removespace = !!(temp & 8);
-
-        printf("Block passive: %d, Fragment: %d, hoSt: %d, Host no space: %d\n",
-               do_passivedpi, do_fragment, do_host, do_host_removespace);
-    }
-    else {
-        printf("goodbyedpi.exe [1: block passive DPI, 2: fragment outbound, "
-               "4: replace Host with hoSt, 8: remove space between host header and value]\n");
-        printf("Default: 15 (all enabled)\n");
-
-        do_passivedpi = 1;
-        do_fragment = 1;
-        do_host = 1;
-        do_host_removespace = 1;
+    if (argc == 1) {
+        /* enable mode -1 by default */
+        do_passivedpi = do_host = do_host_removespace \
+            = do_fragment_http = do_fragment_https = 1;
     }
 
-    printf("Opening filter\n");
+    while ((opt = getopt(argc, argv, "123prsf:e:")) != -1) {
+        switch (opt) {
+            case '1':
+                do_passivedpi = do_host = do_host_removespace \
+                = do_fragment_http = do_fragment_https = 1;
+                break;
+            case '2':
+                do_passivedpi = do_host = do_host_removespace \
+                = do_fragment_http = do_fragment_https = 1;
+                https_fragment_size = 40;
+                break;
+            case '3':
+                do_passivedpi = do_host = do_host_removespace = 1;
+                break;
+            case 'p':
+                do_passivedpi = 1;
+                break;
+            case 'r':
+                do_host = 1;
+                break;
+            case 's':
+                do_host_removespace = 1;
+                break;
+            case 'f':
+                do_fragment_http = 1;
+                http_fragment_size = atoi(optarg);
+                if (http_fragment_size <= 0 || http_fragment_size > 65535) {
+                    printf(fragment_size_message);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'e':
+                do_fragment_https = 1;
+                https_fragment_size = atoi(optarg);
+                if (https_fragment_size <= 0 || https_fragment_size > 65535) {
+                    printf(fragment_size_message);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            default:
+                printf("Usage: goodbyedpi.exe [OPTION...]\n"
+                " -p          block passive DPI\n"
+                " -r          replace Host with hoSt\n"
+                " -s          remove space between host header and its value\n"
+                " -f [value]  set HTTP fragmentation to value\n"
+                " -e [value]  set HTTPS fragmentation to value\n"
+                "\n"
+                " -1          enables all options, -f 2 -e 2 (most compatible mode, default)\n"
+                " -2          enables all options, -f 2 -e 40 (better speed yet still compatible)\n"
+                " -3          all options except fragmentation (best speed)\n");
+                exit(EXIT_FAILURE);
+        }
+    }
+
+    printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
+           "hoSt: %d, Host no space: %d\n",
+           do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
+           (do_fragment_https ? https_fragment_size : 0),
+           do_host, do_host_removespace);
+
+    printf("\nOpening filter\n");
     filter_num = 0;
 
     if (do_passivedpi) {
@@ -178,10 +228,10 @@ int main(int argc, char *argv[]) {
                 }
                 /* Handle OUTBOUND packet, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
-                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80)) {
-                    if (do_host || do_host_removespace) {
-                        data_addr = find_host_header(packet_data, packet_dataLen);
-                    }
+                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
+                        (do_host || do_host_removespace)) {
+
+                    data_addr = find_host_header(packet_data, packet_dataLen);
 
                     if (do_host && data_addr) {
                         /* Replace "Host: " with "hoSt: " */
@@ -192,12 +242,12 @@ int main(int argc, char *argv[]) {
                     if (do_host_removespace && data_addr) {
                         host_addr = data_addr + strlen(http_host_find);
 
+                        fromhost_uptoend_len = packet_dataLen - ((PVOID)host_addr - packet_data);
                         data_addr_rn = dumb_memmem(host_addr,
-                                                    packet_dataLen - ((PVOID)host_addr - packet_data),
+                                                    fromhost_uptoend_len,
                                                     "\r\n", 2);
                         if (data_addr_rn) {
                             host_len = data_addr_rn - host_addr;
-                            fromhost_uptoend_len = packet_dataLen - ((PVOID)host_addr - packet_data);
                             if (host_len <= 64) {
                                 /* Move memory left by 1 byte and reduce packet size for 1 byte */
                                 memmove(host_addr - 1, host_addr, fromhost_uptoend_len);
@@ -210,9 +260,7 @@ int main(int argc, char *argv[]) {
                             }
                         }
                     }
-                    if (do_host || do_host_removespace) {
-                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
-                    }
+                    WinDivertHelperCalcChecksums(packet, packetLen, 0);
                 }
             }
             /* Else if we got TCP packet without data */
@@ -221,9 +269,13 @@ int main(int argc, char *argv[]) {
                 /* If we got SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && 
                     ppTcpHdr->Syn == 1) {
-                    if (do_fragment) {
-                        //printf("Changing Window Size!\n");
-                        change_window_size(packet);
+                    //printf("Changing Window Size!\n");
+                    if (do_fragment_http && ppTcpHdr->DstPort == htons(80)) {
+                        change_window_size(packet, http_fragment_size);
+                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
+                    }
+                    else if (do_fragment_https && ppTcpHdr->DstPort != htons(80)) {
+                        change_window_size(packet, https_fragment_size);
                         WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
                 }
