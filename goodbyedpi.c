@@ -126,6 +126,10 @@ int main(int argc, char *argv[]) {
                 https_fragment_size = 40;
                 break;
             case '3':
+                do_passivedpi = do_host = do_host_removespace \
+                = do_fragment_https = 1;
+                https_fragment_size = 40;
+            case '4':
                 do_passivedpi = do_host = do_host_removespace = 1;
                 break;
             case 'p':
@@ -163,7 +167,8 @@ int main(int argc, char *argv[]) {
                 "\n"
                 " -1          enables all options, -f 2 -e 2 (most compatible mode, default)\n"
                 " -2          enables all options, -f 2 -e 40 (better speed yet still compatible)\n"
-                " -3          all options except fragmentation (best speed)\n");
+                " -3          all options except HTTP fragmentation, -e 40 (even better speed)\n"
+                " -4          all options except fragmentation (best speed)\n");
                 exit(EXIT_FAILURE);
         }
     }

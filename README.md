@@ -21,14 +21,15 @@ Usage: goodbyedpi.exe [OPTION...]
 
  -1          enables all options, -f 2 -e 2 (most compatible mode, default)
  -2          enables all options, -f 2 -e 40 (better speed yet still compatible)
- -3          all options except fragmentation (best speed)
+ -3          all options except HTTP fragmentation, -e 40 (even better speed)
+ -4          all options except fragmentation (best speed)
 ```
 
 Try to run `goodbyedpi.exe` without any arguments first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest mode.
 
-Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites.
+Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites. Mode `-3` speed ups HTTP websites.
 
-Use `goodbyedpi.exe -3` if it works for your ISP's DPI. This is the fastest mode but not compatible with every DPI.
+Use `goodbyedpi.exe -4` if it works for your ISP's DPI. This is the fastest mode but not compatible with every DPI.
 
 # How does it work
 
