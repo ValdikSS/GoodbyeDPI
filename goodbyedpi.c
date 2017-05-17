@@ -27,9 +27,6 @@ static const char *http_redirect_10 = "HTTP/1.0 30";
 static const char *http_redirect_11 = "HTTP/1.1 30";
 static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
-/*static const char *blocklist[] = {
-    "warning.rt.ru",
-};*/
 
 static char* dumb_memmem(char* haystack, int hlen, char* needle, int nlen) {
     // naive implementation
@@ -172,16 +169,6 @@ int main(int argc, char *argv[]) {
                 /* Handle INBOUND packet with data and find HTTP REDIRECT in there */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && packet_dataLen > 16) {
                     /* If INBOUND packet with DATA (tcp.Ack) */
-
-                    /* Drop packets from blocklist */
-                    /* for (i = 0; i < sizeof(blocklist) / sizeof(*blocklist); i++) {
-                        if (dumb_memmem(packet_data, packet_dataLen, (char*)blocklist[i],
-                            strlen(blocklist[i])) != NULL) {
-                                printf("Dropping packet!\n");
-                                dropped = 1;
-                                break;
-                        }
-                    } */
 
                     /* Drop packets from filter with HTTP 30x Redirect */
                     if (do_passivedpi && find_passivedpi_redirect(packet_data)) {
