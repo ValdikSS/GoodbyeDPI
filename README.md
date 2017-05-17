@@ -12,12 +12,23 @@ It handles DPI connected using optical splitter or port mirroring (**Passive DPI
 Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases) and run.
 
 ```
-1: block passive DPI, 2: fragment outbound, 4: replace Host with hoSt, 8: remove space between host header and value
+Usage: goodbyedpi.exe [OPTION...]
+ -p          block passive DPI
+ -r          replace Host with hoSt
+ -s          remove space between host header and its value
+ -f [value]  set HTTP fragmentation to value
+ -e [value]  set HTTPS fragmentation to value
+
+ -1          enables all options, -f 2 -e 2 (most compatible mode, default)
+ -2          enables all options, -f 2 -e 40 (better speed yet still compatible)
+ -3          all options except fragmentation (best speed)
 ```
 
-Try to run `goodbyedpi.exe 13` first. This enables 1, 4 and 8 options (1+4+8 = 13).
+Try to run `goodbyedpi.exe` without any arguments first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest mode.
 
-Run `goodbyedpi.exe 15` if this doesn't work. Fragmentation will cause slowdowns but it works in most cases.
+Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites.
+
+Use `goodbyedpi.exe -3` if it works for your ISP's DPI. This is the fastest mode but not compatible with every DPI.
 
 # How does it work
 

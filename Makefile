@@ -6,7 +6,8 @@ TARGET = goodbyedpi.exe
 LIBS = -L $(WINDIVERTLIBS) -lWinDivert -lws2_32
 CC = $(CPREFIX)-gcc
 CCWINDRES = $(CPREFIX)-windres
-CFLAGS = -Wall -I $(WINDIVERTHEADERS) -L $(WINDIVERTLIBS) -O2
+CFLAGS = -Wall -I $(WINDIVERTHEADERS) -L $(WINDIVERTLIBS) \
+         -O2 -fPIE -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2
 
 .PHONY: default all clean
 
