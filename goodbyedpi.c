@@ -29,13 +29,13 @@ static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
 static const char *location_http = "\r\nLocation: http://";
 
-static char* dumb_memmem(char* haystack, int hlen, char* needle, int nlen) {
+static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
     // naive implementation
     if (nlen > hlen) return 0;
     int i;
     for (i=0; i<hlen-nlen+1; i++) {
         if (memcmp(haystack+i,needle,nlen)==0) {
-            return haystack+i;
+            return (char*)(haystack+i);
         }
     }
     return NULL;
@@ -81,9 +81,9 @@ static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
 }
 
 /* Finds Host header with \r\n before it */
-static PVOID find_host_header(char *pktdata, int pktlen) {
+static PVOID find_host_header(const char *pktdata, int pktlen) {
     return dumb_memmem(pktdata, pktlen,
-                (char*)http_host_find, strlen(http_host_find));
+                http_host_find, strlen(http_host_find));
 }
 
 static void change_window_size(char *pkt, int size) {
