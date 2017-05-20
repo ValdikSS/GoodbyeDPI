@@ -35,7 +35,7 @@ Use `goodbyedpi.exe -4` if it works for your ISP's DPI. This is the fastest mode
 
 ### Passive DPI
 
-Most Passive DPI send HTTP 301 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster than destination website. Packets sent by DPI have always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets are blocked by GoodbyeDPI.
+Most Passive DPI send HTTP 302 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster than destination website. Packets sent by DPI have always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets, if they redirect you to another website (censorship page), are blocked by GoodbyeDPI.
 
 ### Active DPI
 
