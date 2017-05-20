@@ -23,10 +23,11 @@
     
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
-static const char *http_redirect_10 = "HTTP/1.0 30";
-static const char *http_redirect_11 = "HTTP/1.1 30";
+static const char *http10_redirect_302 = "HTTP/1.0 302 ";
+static const char *http11_redirect_302 = "HTTP/1.1 302 ";
 static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
+static const char *location_http = "\r\nLocation: http://";
 
 static char* dumb_memmem(char* haystack, int hlen, char* needle, int nlen) {
     // naive implementation
@@ -66,10 +67,15 @@ static void sigint_handler(int sig) {
     exit(EXIT_SUCCESS);
 }
 
-static int find_passivedpi_redirect(char *pktdata) {
-    if (memcmp(pktdata, http_redirect_11, strlen(http_redirect_11)) == 0
-        || memcmp(pktdata, http_redirect_10, strlen(http_redirect_10)) == 0) {
-        return 1;
+static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
+    /* First check if this is HTTP 302 redirect */
+    if (memcmp(pktdata, http11_redirect_302, strlen(http11_redirect_302)) == 0 ||
+        memcmp(pktdata, http10_redirect_302, strlen(http10_redirect_302)) == 0)
+    {
+        /* Then check if this is a redirect to new http site */
+        if (dumb_memmem(pktdata, pktlen, location_http, strlen(location_http))) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -226,7 +232,7 @@ int main(int argc, char *argv[]) {
                     /* If INBOUND packet with DATA (tcp.Ack) */
 
                     /* Drop packets from filter with HTTP 30x Redirect */
-                    if (do_passivedpi && find_passivedpi_redirect(packet_data)) {
+                    if (do_passivedpi && is_passivedpi_redirect(packet_data, packet_dataLen)) {
                         //printf("Dropping HTTP Redirect packet!\n");
                         should_reinject = 0;
                     }
