@@ -86,7 +86,7 @@ static PVOID find_host_header(const char *pktdata, int pktlen) {
                 http_host_find, strlen(http_host_find));
 }
 
-static void change_window_size(char *pkt, int size) {
+static void change_window_size(const char *pkt, int size) {
     *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
 }
 
