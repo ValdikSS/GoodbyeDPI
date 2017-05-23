@@ -28,6 +28,24 @@ static const char *http11_redirect_302 = "HTTP/1.1 302 ";
 static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
 static const char *location_http = "\r\nLocation: http://";
+static const char *http_methods[] = {
+    "GET ",
+    "HEAD ",
+    "POST ",
+    "PUT ",
+    "DELETE ",
+    "CONNECT ",
+    "OPTIONS ",
+    "TRACE ",
+    "PATCH ",
+    "PROPFIND ",
+    "PROPPATCH ",
+    "MKCOL ",
+    "COPY ",
+    "MOVE ",
+    "LOCK ",
+    "UNLOCK ",
+};
 
 static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
     // naive implementation
@@ -90,6 +108,17 @@ static void change_window_size(const char *pkt, int size) {
     *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
 }
 
+/* HTTP method end without trailing space */
+static PVOID find_http_method_end(const char *pkt) {
+    int i;
+    for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
+        if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
+            return (char*)pkt+strlen(http_methods[i]) - 1;
+        }
+    }
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     static const char fragment_size_message[] =
                 "Fragment size should be in range [0 - 65535]\n";
@@ -106,10 +135,10 @@ int main(int argc, char *argv[]) {
 
     int do_passivedpi = 0, do_fragment_http = 0,
         do_fragment_https = 0, do_host = 0,
-        do_host_removespace = 0;
+        do_host_removespace = 0, do_additional_space = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
-    char *data_addr, *data_addr_rn, *host_addr;
+    char *data_addr, *data_addr_rn, *host_addr, *method_addr;
     int host_len, fromhost_uptoend_len;
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
@@ -120,7 +149,7 @@ int main(int argc, char *argv[]) {
             = do_fragment_http = do_fragment_https = 1;
     }
 
-    while ((opt = getopt(argc, argv, "1234prsf:e:")) != -1) {
+    while ((opt = getopt(argc, argv, "1234prsaf:e:")) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -147,6 +176,10 @@ int main(int argc, char *argv[]) {
             case 's':
                 do_host_removespace = 1;
                 break;
+            case 'a':
+                do_additional_space = 1;
+                do_host_removespace = 1;
+                break;
             case 'f':
                 do_fragment_http = 1;
                 http_fragment_size = atoi(optarg);
@@ -168,22 +201,23 @@ int main(int argc, char *argv[]) {
                 " -p          block passive DPI\n"
                 " -r          replace Host with hoSt\n"
                 " -s          remove space between host header and its value\n"
+                " -a          additional space between Method and Request-URI (enables -s, may break sites)\n"
                 " -f [value]  set HTTP fragmentation to value\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
                 "\n"
-                " -1          enables all options, -f 2 -e 2 (most compatible mode, default)\n"
-                " -2          enables all options, -f 2 -e 40 (better speed yet still compatible)\n"
-                " -3          all options except HTTP fragmentation, -e 40 (even better speed)\n"
-                " -4          all options except fragmentation (best speed)\n");
+                " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
+                " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
+                " -3          -p -r -s -e 40 (even better speed)\n"
+                " -4          -p -r -s (best speed)\n");
                 exit(EXIT_FAILURE);
         }
     }
 
     printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
-           "hoSt: %d, Host no space: %d\n",
+           "hoSt: %d, Host no space: %d, Additional space: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
-           do_host, do_host_removespace);
+           do_host, do_host_removespace, do_additional_space);
 
     printf("\nOpening filter\n");
     filter_num = 0;
@@ -243,35 +277,47 @@ int main(int argc, char *argv[]) {
                         (do_host || do_host_removespace)) {
 
                     data_addr = find_host_header(packet_data, packet_dataLen);
+                    if (data_addr) {
 
-                    if (do_host && data_addr) {
-                        /* Replace "Host: " with "hoSt: " */
-                        memcpy(data_addr, http_host_replace, strlen(http_host_replace));
-                        //printf("Replaced Host header!\n");
-                    }
+                        if (do_host) {
+                            /* Replace "Host: " with "hoSt: " */
+                            memcpy(data_addr, http_host_replace, strlen(http_host_replace));
+                            //printf("Replaced Host header!\n");
+                        }
 
-                    if (do_host_removespace && data_addr) {
-                        host_addr = data_addr + strlen(http_host_find);
+                        if (do_additional_space && do_host_removespace) {
+                            /* End of "Host:" without trailing space */
+                            host_addr = data_addr + strlen(http_host_find) - 1;
+                            method_addr = find_http_method_end(packet_data);
 
-                        fromhost_uptoend_len = packet_dataLen - ((PVOID)host_addr - packet_data);
-                        data_addr_rn = dumb_memmem(host_addr,
-                                                    fromhost_uptoend_len,
-                                                    "\r\n", 2);
-                        if (data_addr_rn) {
-                            host_len = data_addr_rn - host_addr;
-                            if (host_len <= 64) {
-                                /* Move memory left by 1 byte and reduce packet size for 1 byte */
-                                memmove(host_addr - 1, host_addr, fromhost_uptoend_len);
-                                /* Reduce "Total Length" in IP header by 1 byte */
-                                *(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET) = ntohs(
-                                     htons(*(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET)) - 1);
-                                /* Reduce packetLen by 1 byte */
-                                packetLen--;
-                                //printf("Replaced Host header!\n");
+                            if (method_addr) {
+                                memmove(method_addr + 1, method_addr, (PVOID)host_addr - (PVOID)method_addr);
                             }
                         }
+                        else if (do_host_removespace) {
+                            host_addr = data_addr + strlen(http_host_find);
+
+                            fromhost_uptoend_len = packet_dataLen - ((PVOID)host_addr - packet_data);
+                            data_addr_rn = dumb_memmem(host_addr,
+                                                        fromhost_uptoend_len,
+                                                        "\r\n", 2);
+                            if (data_addr_rn) {
+                                host_len = data_addr_rn - host_addr;
+                                if (host_len <= 64) {
+                                    /* Move memory left by 1 byte and reduce packet size for 1 byte */
+                                    memmove(host_addr - 1, host_addr, fromhost_uptoend_len);
+                                    /* Reduce "Total Length" in IP header by 1 byte */
+                                    *(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET) = ntohs(
+                                        htons(*(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET)) - 1);
+                                    /* Reduce packetLen by 1 byte */
+                                    packetLen--;
+                                    //printf("Replaced Host header!\n");
+                                }
+                            }
+                        }
+
+                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
-                    WinDivertHelperCalcChecksums(packet, packetLen, 0);
                 }
             }
             /* Else if we got TCP packet without data */

@@ -18,14 +18,17 @@ Usage: goodbyedpi.exe [OPTION...]
  -s          remove space between host header and its value
  -f [value]  set HTTP fragmentation to value
  -e [value]  set HTTPS fragmentation to value
+ -a          additional space between Method and Request-URI (enables -s, may break sites)
 
- -1          enables all options, -f 2 -e 2 (most compatible mode, default)
- -2          enables all options, -f 2 -e 40 (better speed yet still compatible)
- -3          all options except HTTP fragmentation, -e 40 (even better speed)
- -4          all options except fragmentation (best speed)
+ -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
+ -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
+ -3          -p -r -s -e 40 (even better speed)
+ -4          -p -r -s (best speed)
 ```
 
-Try to run `goodbyedpi.exe` without any arguments first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest mode.
+Try to run `goodbyedpi.exe -1 -a` first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
+
+Try `-1` to see if it works too.
 
 Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites. Mode `-3` speed ups HTTP websites.
 
@@ -39,13 +42,14 @@ Most Passive DPI send HTTP 302 Redirect if you try to access blocked website ove
 
 ### Active DPI
 
-Active DPI is more tricky to fool. Currently the software uses 3 methods to circumvent Active DPI:
+Active DPI is more tricky to fool. Currently the software uses 4 methods to circumvent Active DPI:
 
 * TCP-level fragmentation for first data packet
 * Replacing `Host` header with `hoSt`
 * Removing space between header name and value in `Host` header
+* Adding additional space between HTTP Method (GET, POST etc) and URI
 
-These methods do not break any website as are fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship.
+These methods should not break any website as are fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
 
 The program loads WinDivert driver which uses Windows Filtering Platform to set filters and redirect packets to the userspace. It's running as long as console window is visible and terminates when you close the window.
 
