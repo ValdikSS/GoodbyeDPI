@@ -273,7 +273,8 @@ int main(int argc, char *argv[]) {
                 }
                 /* Handle OUTBOUND packet, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
-                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
+                        packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
+                        find_http_method_end(packet_data) &&
                         (do_host || do_host_removespace)) {
 
                     data_addr = find_host_header(packet_data, packet_dataLen);
