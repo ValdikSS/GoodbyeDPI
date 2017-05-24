@@ -27,6 +27,7 @@ static const char *http10_redirect_302 = "HTTP/1.0 302 ";
 static const char *http11_redirect_302 = "HTTP/1.1 302 ";
 static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
+static const char *http_useragent_find = "\r\nUser-Agent: ";
 static const char *location_http = "\r\nLocation: http://";
 static const char *http_methods[] = {
     "GET ",
@@ -104,6 +105,12 @@ static PVOID find_host_header(const char *pktdata, int pktlen) {
                 http_host_find, strlen(http_host_find));
 }
 
+/* Finds User-Agent header with \r\n before it */
+static PVOID find_useragent_header(const char *pktdata, int pktlen) {
+    return dumb_memmem(pktdata, pktlen,
+                http_useragent_find, strlen(http_useragent_find));
+}
+
 static void change_window_size(const char *pkt, int size) {
     *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
 }
@@ -138,8 +145,8 @@ int main(int argc, char *argv[]) {
         do_host_removespace = 0, do_additional_space = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
-    char *data_addr, *data_addr_rn, *host_addr, *method_addr;
-    int host_len, fromhost_uptoend_len;
+    char *data_addr, *data_addr_rn, *host_addr, *useragent_addr, *method_addr;
+    int data_len, host_len;
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
@@ -298,21 +305,41 @@ int main(int argc, char *argv[]) {
                         else if (do_host_removespace) {
                             host_addr = data_addr + strlen(http_host_find);
 
-                            fromhost_uptoend_len = packet_dataLen - ((PVOID)host_addr - packet_data);
                             data_addr_rn = dumb_memmem(host_addr,
-                                                        fromhost_uptoend_len,
-                                                        "\r\n", 2);
+                                                       packet_dataLen - ((PVOID)host_addr - packet_data),
+                                                       "\r\n", 2);
                             if (data_addr_rn) {
+                                /* We move Host header value by one byte to the left and then
+                                 * "insert" stolen space to the end of User-Agent value because
+                                 * some web servers are not tolerant to additional space in the
+                                 * end of Host header.
+                                 *
+                                 * Nothing is done if User-Agent header is missing.
+                                 */
                                 host_len = data_addr_rn - host_addr;
-                                if (host_len <= 64) {
-                                    /* Move memory left by 1 byte and reduce packet size for 1 byte */
-                                    memmove(host_addr - 1, host_addr, fromhost_uptoend_len);
-                                    /* Reduce "Total Length" in IP header by 1 byte */
-                                    *(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET) = ntohs(
-                                        htons(*(uint16_t*)(packet + IPV4_TOTALLEN_OFFSET)) - 1);
-                                    /* Reduce packetLen by 1 byte */
-                                    packetLen--;
-                                    //printf("Replaced Host header!\n");
+                                useragent_addr = find_useragent_header(packet_data, packet_dataLen);
+                                if (host_len <= 253 && useragent_addr && useragent_addr > host_addr) {
+                                    /* Performing action only if User-Agent header goes after Host */
+
+                                    useragent_addr += strlen(http_useragent_find);
+                                    /* useragent_addr is in the beginning of User-Agent value */
+
+                                    data_len = packet_dataLen - ((PVOID)useragent_addr - packet_data);
+                                    data_addr_rn = dumb_memmem(useragent_addr,
+                                                               data_len, "\r\n", 2);
+                                    /* data_addr_rn is in the end of User-Agent value */
+
+                                    if (data_addr_rn) {
+                                        data_len = (PVOID)data_addr_rn - (PVOID)host_addr;
+
+                                        /* Move one byte to the left from "Host:"
+                                         * to the end of User-Agen
+                                         */
+                                        memmove(host_addr - 1, host_addr, data_len);
+                                        /* Put space in the end of User-Agent header */
+                                        *(char*)(data_addr_rn - 1) = ' ';
+                                        //printf("Replaced Host header!\n");
+                                    }
                                 }
                             }
                         }
