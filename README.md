@@ -65,6 +65,28 @@ And for x86_64:
 
 `make CPREFIX=x86_64-w64-mingw32 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
 
+# How to install as a windows service
+One way is using a program [srvstart](http://www.rozanski.org.uk/software).
+Unpack to the dir of goodbyedpi and create 3 files:
+
+*goodbyedpi.ini*
+```INI
+[GoodByeDPI]
+startup=goodbyedpi.exe
+shutdown_method=winmessage
+auto_restart=n
+```
+*srvinstall.bat*
+```Batchfile
+srvstart install GoodByeDPI -c %CD%\goodbyedpi-svc.ini
+```
+*srvremove.bat*
+```Batchfile
+srvstart remove GoodByeDPI
+```
+Run this this batch files as an Administrator to install/remove windows service.
+Then you can open windows services panel to run service or make it start automaticaly.
+
 # Similar projects
 
 [zapret](https://github.com/bol-van/zapret) by @bol-van (for Linux).
