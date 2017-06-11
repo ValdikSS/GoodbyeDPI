@@ -355,11 +355,11 @@ int main(int argc, char *argv[]) {
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && 
                     ppTcpHdr->Syn == 1) {
                     //printf("Changing Window Size!\n");
-                    if (do_fragment_http && ppTcpHdr->DstPort == htons(80)) {
+                    if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
                         change_window_size(packet, http_fragment_size);
                         WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
-                    else if (do_fragment_https && ppTcpHdr->DstPort != htons(80)) {
+                    else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
                         change_window_size(packet, https_fragment_size);
                         WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
