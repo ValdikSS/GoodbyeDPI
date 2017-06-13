@@ -79,7 +79,7 @@ auto_restart=n
 ```
 *srvinstall.bat*
 ```Batchfile
-srvstart install GoodByeDPI -c %CD%\goodbyedpi-svc.ini
+srvstart install GoodByeDPI -c %CD%\goodbyedpi.ini
 ```
 *srvremove.bat*
 ```Batchfile
