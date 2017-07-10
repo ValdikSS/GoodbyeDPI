@@ -38,7 +38,7 @@ Use `goodbyedpi.exe -4` if it works for your ISP's DPI. This is the fastest mode
 
 ### Passive DPI
 
-Most Passive DPI send HTTP 302 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster than destination website. Packets sent by DPI have always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets, if they redirect you to another website (censorship page), are blocked by GoodbyeDPI.
+Most Passive DPI send HTTP 302 Redirect if you try to access blocked website over HTTP and TCP Reset in case of HTTPS, faster than destination website. Packets sent by DPI always have IP Identification field equal to `0x0000` or `0x0001`, as seen with Russian providers. These packets, if they redirect you to another website (censorship page), are blocked by GoodbyeDPI.
 
 ### Active DPI
 
@@ -49,7 +49,7 @@ Active DPI is more tricky to fool. Currently the software uses 4 methods to circ
 * Removing space between header name and value in `Host` header
 * Adding additional space between HTTP Method (GET, POST etc) and URI
 
-These methods should not break any website as are fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
+These methods should not break any website as they're fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
 
 The program loads WinDivert driver which uses Windows Filtering Platform to set filters and redirect packets to the userspace. It's running as long as console window is visible and terminates when you close the window.
 
@@ -68,7 +68,7 @@ And for x86_64:
 # How to install as Windows Service
 
 One way is using an [srvstart](http://www.rozanski.org.uk/software) program.  
-Unpack it to goodbyedpi directory and create 3 files:
+Unpack it to `goodbyedpi` directory and create 3 files:
 
 *goodbyedpi.ini*
 ```INI
