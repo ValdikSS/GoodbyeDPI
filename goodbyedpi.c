@@ -20,6 +20,21 @@
 #define TCP_HDR_LEN 20
 #define IPV4_TOTALLEN_OFFSET 2
 #define TCP_WINDOWSIZE_OFFSET 14
+
+#define DIVERT_NO_LOCALNETS_DST "(" \
+                   "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
+                   "(ip.DstAddr < 10.0.0.0 or ip.DstAddr > 10.255.255.255) and " \
+                   "(ip.DstAddr < 192.168.0.0 or ip.DstAddr > 192.168.255.255) and " \
+                   "(ip.DstAddr < 172.16.0.0 or ip.DstAddr > 172.31.255.255) and " \
+                   "(ip.DstAddr < 169.254.0.0 or ip.DstAddr > 169.254.255.255)" \
+                   ")"
+#define DIVERT_NO_LOCALNETS_SRC "(" \
+                   "(ip.SrcAddr < 127.0.0.1 or ip.SrcAddr > 127.255.255.255) and " \
+                   "(ip.SrcAddr < 10.0.0.0 or ip.SrcAddr > 10.255.255.255) and " \
+                   "(ip.SrcAddr < 192.168.0.0 or ip.SrcAddr > 192.168.255.255) and " \
+                   "(ip.SrcAddr < 172.16.0.0 or ip.SrcAddr > 172.31.255.255) and " \
+                   "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
+                   ")"
     
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
@@ -238,21 +253,30 @@ int main(int argc, char *argv[]) {
     filter_num = 0;
 
     if (do_passivedpi) {
-        /* Filter for inbound RST packets with ID = 0 or 1 */
-        filters[filter_num] = init("inbound and (ip.Id == 0x0001 or ip.Id == 0x0000) and "
-                        "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst",
-                        WINDIVERT_FLAG_DROP);
+        /* IPv4 filter for inbound RST packets with ID = 0 or 1 */
+        filters[filter_num] = init(
+            "inbound and ip and tcp and "
+            "(ip.Id == 0x0001 or ip.Id == 0x0000) and "
+            "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and "
+            DIVERT_NO_LOCALNETS_SRC,
+            WINDIVERT_FLAG_DROP);
         filter_num++;
     }
 
     /* 
-     * Filter for inbound HTTP redirection packets and
+     * IPv4 filter for inbound HTTP redirection packets and
      * active DPI circumvention
      */
-    filters[filter_num] = init("(inbound and (ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) "
-                      "or (inbound and (tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn) "
-                      "or (outbound and (tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack)",
-                      0);
+    filters[filter_num] = init("ip and tcp and "
+        "(inbound and (("
+         "((ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) or "
+         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
+         ") and " DIVERT_NO_LOCALNETS_SRC ") or "
+        "(outbound and "
+         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and "
+         DIVERT_NO_LOCALNETS_DST ")"
+        ")",
+        0);
 
     w_filter = filters[filter_num];
     filter_num++;
