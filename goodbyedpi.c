@@ -62,9 +62,15 @@ static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int
 }
 
 static HANDLE init(char *filter, UINT64 flags) {
+    LPTSTR errormessage = NULL;
     filter = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, 0, flags);
     if (filter != INVALID_HANDLE_VALUE)
         return filter;
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                  FORMAT_MESSAGE_IGNORE_INSERTS,
+                  NULL, GetLastError(), MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+                  (LPTSTR)&errormessage, 0, NULL);
+    printf("%s", errormessage);
     return NULL;
 }
 
