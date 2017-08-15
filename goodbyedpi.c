@@ -29,6 +29,7 @@ static const char *http_host_find = "\r\nHost: ";
 static const char *http_host_replace = "\r\nhoSt: ";
 static const char *http_useragent_find = "\r\nUser-Agent: ";
 static const char *location_http = "\r\nLocation: http://";
+static const char *connection_close = "\r\nConnection: close";
 static const char *http_methods[] = {
     "GET ",
     "HEAD ",
@@ -91,8 +92,9 @@ static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
     if (memcmp(pktdata, http11_redirect_302, strlen(http11_redirect_302)) == 0 ||
         memcmp(pktdata, http10_redirect_302, strlen(http10_redirect_302)) == 0)
     {
-        /* Then check if this is a redirect to new http site */
-        if (dumb_memmem(pktdata, pktlen, location_http, strlen(location_http))) {
+        /* Then check if this is a redirect to new http site with Connection: close */
+        if (dumb_memmem(pktdata, pktlen, location_http, strlen(location_http)) &&
+            dumb_memmem(pktdata, pktlen, connection_close, strlen(connection_close))) {
             return 1;
         }
     }
