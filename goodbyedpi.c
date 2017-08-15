@@ -27,6 +27,7 @@
                    "(ip.DstAddr < 192.168.0.0 or ip.DstAddr > 192.168.255.255) and " \
                    "(ip.DstAddr < 172.16.0.0 or ip.DstAddr > 172.31.255.255) and " \
                    "(ip.DstAddr < 169.254.0.0 or ip.DstAddr > 169.254.255.255)" \
+                   "(ip.DstAddr < 100.64.0.0 or ip.DstAddr > 100.127.255.255)" \
                    ")"
 #define DIVERT_NO_LOCALNETS_SRC "(" \
                    "(ip.SrcAddr < 127.0.0.1 or ip.SrcAddr > 127.255.255.255) and " \
@@ -34,6 +35,7 @@
                    "(ip.SrcAddr < 192.168.0.0 or ip.SrcAddr > 192.168.255.255) and " \
                    "(ip.SrcAddr < 172.16.0.0 or ip.SrcAddr > 172.31.255.255) and " \
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
+                   "(ip.SrcAddr < 100.64.0.0 or ip.SrcAddr > 100.127.255.255)" \
                    ")"
     
 static HANDLE filters[MAX_FILTERS];
