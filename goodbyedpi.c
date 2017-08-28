@@ -53,15 +53,6 @@ static const char *http_methods[] = {
     "DELETE ",
     "CONNECT ",
     "OPTIONS ",
-    "TRACE ",
-    "PATCH ",
-    "PROPFIND ",
-    "PROPPATCH ",
-    "MKCOL ",
-    "COPY ",
-    "MOVE ",
-    "LOCK ",
-    "UNLOCK ",
 };
 
 static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
