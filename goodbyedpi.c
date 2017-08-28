@@ -130,11 +130,19 @@ static void change_window_size(const char *pkt, int size) {
 }
 
 /* HTTP method end without trailing space */
-static PVOID find_http_method_end(const char *pkt) {
+static PVOID find_http_method_end(const char *pkt, int offset) {
     int i;
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
-            return (char*)pkt+strlen(http_methods[i]) - 1;
+            return (char*)pkt + strlen(http_methods[i]) - 1;
+        }
+        /* Try to find HTTP method in a second part of fragmented packet */
+        if ((offset == 1 || offset == 2) &&
+            memcmp(pkt, http_methods[i] + offset,
+                   strlen(http_methods[i]) - offset) == 0
+           )
+        {
+            return (char*)pkt + strlen(http_methods[i]) - offset - 1;
         }
     }
     return NULL;
@@ -304,8 +312,10 @@ int main(int argc, char *argv[]) {
                 /* Handle OUTBOUND packet, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
-                        find_http_method_end(packet_data) &&
-                        (do_host || do_host_removespace)) {
+                        find_http_method_end(packet_data,
+                                             (do_fragment_http ? http_fragment_size : 0)) &&
+                        (do_host || do_host_removespace))
+                {
 
                     data_addr = find_host_header(packet_data, packet_dataLen);
                     if (data_addr) {
@@ -319,7 +329,8 @@ int main(int argc, char *argv[]) {
                         if (do_additional_space && do_host_removespace) {
                             /* End of "Host:" without trailing space */
                             host_addr = data_addr + strlen(http_host_find) - 1;
-                            method_addr = find_http_method_end(packet_data);
+                            method_addr = find_http_method_end(packet_data,
+                                                            (do_fragment_http ? http_fragment_size : 0));
 
                             if (method_addr) {
                                 memmove(method_addr + 1, method_addr, (PVOID)host_addr - (PVOID)method_addr);
