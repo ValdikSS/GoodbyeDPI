@@ -248,6 +248,12 @@ int main(int argc, char *argv[]) {
            (do_fragment_https ? https_fragment_size : 0),
            do_host, do_host_removespace, do_additional_space);
 
+    if (do_fragment_http && http_fragment_size > 2) {
+        printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
+               "with other options. Please use values <= 2 or disable HTTP fragmentation "
+               "completely.\n");
+    }
+
     printf("\nOpening filter\n");
     filter_num = 0;
 
