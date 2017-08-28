@@ -352,27 +352,40 @@ int main(int argc, char *argv[]) {
                                  */
                                 host_len = data_addr_rn - host_addr;
                                 useragent_addr = find_useragent_header(packet_data, packet_dataLen);
-                                if (host_len <= 253 && useragent_addr && useragent_addr > host_addr) {
-                                    /* Performing action only if User-Agent header goes after Host */
-
+                                if (host_len <= 253 && useragent_addr) {
                                     useragent_addr += strlen(http_useragent_find);
                                     /* useragent_addr is in the beginning of User-Agent value */
 
                                     data_len = packet_dataLen - ((PVOID)useragent_addr - packet_data);
                                     data_addr_rn = dumb_memmem(useragent_addr,
-                                                               data_len, "\r\n", 2);
+                                                            data_len, "\r\n", 2);
                                     /* data_addr_rn is in the end of User-Agent value */
 
                                     if (data_addr_rn) {
-                                        data_len = (PVOID)data_addr_rn - (PVOID)host_addr;
+                                        if (useragent_addr > host_addr) {
+                                            /* User-Agent goes AFTER Host header */
+                                            data_len = (PVOID)data_addr_rn - (PVOID)host_addr;
 
-                                        /* Move one byte to the left from "Host:"
-                                         * to the end of User-Agen
-                                         */
-                                        memmove(host_addr - 1, host_addr, data_len);
-                                        /* Put space in the end of User-Agent header */
-                                        *(char*)(data_addr_rn - 1) = ' ';
-                                        //printf("Replaced Host header!\n");
+                                            /* Move one byte to the LEFT from "Host:"
+                                            * to the end of User-Agent
+                                            */
+                                            memmove(host_addr - 1, host_addr, data_len);
+                                            /* Put space in the end of User-Agent header */
+                                            *(char*)(data_addr_rn - 1) = ' ';
+                                            //printf("Replaced Host header!\n");
+                                        }
+                                        else {
+                                            /* User-Agent goes BEFORE Host header */
+                                            data_len = (PVOID)host_addr - (PVOID)data_addr_rn - 1;
+
+                                            /* Move one byte to the RIGHT from the end of User-Agent
+                                            * to the "Host:"
+                                            */
+                                            memmove(data_addr_rn + 1, data_addr_rn, data_len);
+                                            /* Put space in the end of User-Agent header */
+                                            *(char*)(data_addr_rn) = ' ';
+                                            //printf("Replaced Host header!\n");
+                                        }
                                     }
                                 }
                             }
