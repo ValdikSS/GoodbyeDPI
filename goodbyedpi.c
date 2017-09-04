@@ -151,7 +151,7 @@ static PVOID find_http_method_end(const char *pkt, int offset) {
 int main(int argc, char *argv[]) {
     static const char fragment_size_message[] =
                 "Fragment size should be in range [0 - 65535]\n";
-    int i, should_reinject = 0;
+    int i, should_reinject, should_recalc_checksum = 0;
     int opt;
     HANDLE w_filter = NULL;
     WINDIVERT_ADDRESS addr;
@@ -299,6 +299,7 @@ int main(int argc, char *argv[]) {
             //printf("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
             //       packetLen);
             should_reinject = 1;
+            should_recalc_checksum = 0;
 
             if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)) {
@@ -329,6 +330,7 @@ int main(int argc, char *argv[]) {
                         if (do_host) {
                             /* Replace "Host: " with "hoSt: " */
                             memcpy(data_addr, http_host_replace, strlen(http_host_replace));
+                            should_recalc_checksum = 1;
                             //printf("Replaced Host header!\n");
                         }
 
@@ -340,6 +342,7 @@ int main(int argc, char *argv[]) {
 
                             if (method_addr) {
                                 memmove(method_addr + 1, method_addr, (PVOID)host_addr - (PVOID)method_addr);
+                                should_recalc_checksum = 1;
                             }
                         }
                         else if (do_host_removespace) {
@@ -378,6 +381,7 @@ int main(int argc, char *argv[]) {
                                             memmove(host_addr - 1, host_addr, data_len);
                                             /* Put space in the end of User-Agent header */
                                             *(char*)(data_addr_rn - 1) = ' ';
+                                            should_recalc_checksum = 1;
                                             //printf("Replaced Host header!\n");
                                         }
                                         else {
@@ -390,17 +394,17 @@ int main(int argc, char *argv[]) {
                                             memmove(data_addr_rn + 1, data_addr_rn, data_len);
                                             /* Put space in the end of User-Agent header */
                                             *(char*)(data_addr_rn) = ' ';
+                                            should_recalc_checksum = 1;
                                             //printf("Replaced Host header!\n");
                                         }
-                                    }
-                                }
-                            }
-                        }
+                                    } /* if (dara_addr_rn) */
+                                } /* if (host_len <= 253 && useragent_addr) */
+                            } /* if (data_addr_rn) */
+                        } /* else if (do_host_removespace) */
+                    } /* if (data_addr) */
+                } /* Handle OUTBOUND packet with data */
+            } /* Handle packet with data */
 
-                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
-                    }
-                }
-            }
             /* Else if we got TCP packet without data */
             else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)) {
@@ -410,17 +414,20 @@ int main(int argc, char *argv[]) {
                     //printf("Changing Window Size!\n");
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
                         change_window_size(packet, http_fragment_size);
-                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
+                        should_recalc_checksum = 1;
                     }
                     else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
                         change_window_size(packet, https_fragment_size);
-                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
+                        should_recalc_checksum = 1;
                     }
                 }
             }
 
             if (should_reinject) {
                 //printf("Re-injecting!\n");
+                if (should_recalc_checksum) {
+                    WinDivertHelperCalcChecksums(packet, packetLen, 0);
+                }
                 WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
             }
         }
