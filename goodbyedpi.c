@@ -295,141 +295,35 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, sigint_handler);
 
     while (1) {
-        if (WinDivertRecv(w_filter, packet, sizeof(packet), &addr, &packetLen)) {
-            //printf("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
-            //       packetLen);
-            should_reinject = 1;
-            should_recalc_checksum = 0;
+         if (WinDivertRecv(w_filter, packet, sizeof(packet), &addr, &packetLen)) {
+            printf("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
+                   packetLen);
 
+            // do nothing for DATA packet
             if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)) {
-                //printf("Got parsed packet, len=%d!\n", packet_dataLen);
-                /* Got a packet WITH DATA */
+            }
 
-                /* Handle INBOUND packet with data and find HTTP REDIRECT in there */
-                if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && packet_dataLen > 16) {
-                    /* If INBOUND packet with DATA (tcp.Ack) */
-
-                    /* Drop packets from filter with HTTP 30x Redirect */
-                    if (do_passivedpi && is_passivedpi_redirect(packet_data, packet_dataLen)) {
-                        //printf("Dropping HTTP Redirect packet!\n");
-                        should_reinject = 0;
-                    }
-                }
-                /* Handle OUTBOUND packet, search for Host header */
-                else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
-                        packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
-                        find_http_method_end(packet_data,
-                                             (do_fragment_http ? http_fragment_size : 0)) &&
-                        (do_host || do_host_removespace))
-                {
-
-                    data_addr = find_host_header(packet_data, packet_dataLen);
-                    if (data_addr) {
-
-                        if (do_host) {
-                            /* Replace "Host: " with "hoSt: " */
-                            memcpy(data_addr, http_host_replace, strlen(http_host_replace));
-                            should_recalc_checksum = 1;
-                            //printf("Replaced Host header!\n");
-                        }
-
-                        if (do_additional_space && do_host_removespace) {
-                            /* End of "Host:" without trailing space */
-                            host_addr = data_addr + strlen(http_host_find) - 1;
-                            method_addr = find_http_method_end(packet_data,
-                                                            (do_fragment_http ? http_fragment_size : 0));
-
-                            if (method_addr) {
-                                memmove(method_addr + 1, method_addr, (PVOID)host_addr - (PVOID)method_addr);
-                                should_recalc_checksum = 1;
-                            }
-                        }
-                        else if (do_host_removespace) {
-                            host_addr = data_addr + strlen(http_host_find);
-
-                            data_addr_rn = dumb_memmem(host_addr,
-                                                       packet_dataLen - ((PVOID)host_addr - packet_data),
-                                                       "\r\n", 2);
-                            if (data_addr_rn) {
-                                /* We move Host header value by one byte to the left and then
-                                 * "insert" stolen space to the end of User-Agent value because
-                                 * some web servers are not tolerant to additional space in the
-                                 * end of Host header.
-                                 *
-                                 * Nothing is done if User-Agent header is missing.
-                                 */
-                                host_len = data_addr_rn - host_addr;
-                                useragent_addr = find_useragent_header(packet_data, packet_dataLen);
-                                if (host_len <= 253 && useragent_addr) {
-                                    useragent_addr += strlen(http_useragent_find);
-                                    /* useragent_addr is in the beginning of User-Agent value */
-
-                                    data_len = packet_dataLen - ((PVOID)useragent_addr - packet_data);
-                                    data_addr_rn = dumb_memmem(useragent_addr,
-                                                            data_len, "\r\n", 2);
-                                    /* data_addr_rn is in the end of User-Agent value */
-
-                                    if (data_addr_rn) {
-                                        if (useragent_addr > host_addr) {
-                                            /* User-Agent goes AFTER Host header */
-                                            data_len = (PVOID)data_addr_rn - (PVOID)host_addr;
-
-                                            /* Move one byte to the LEFT from "Host:"
-                                            * to the end of User-Agent
-                                            */
-                                            memmove(host_addr - 1, host_addr, data_len);
-                                            /* Put space in the end of User-Agent header */
-                                            *(char*)(data_addr_rn - 1) = ' ';
-                                            should_recalc_checksum = 1;
-                                            //printf("Replaced Host header!\n");
-                                        }
-                                        else {
-                                            /* User-Agent goes BEFORE Host header */
-                                            data_len = (PVOID)host_addr - (PVOID)data_addr_rn - 1;
-
-                                            /* Move one byte to the RIGHT from the end of User-Agent
-                                            * to the "Host:"
-                                            */
-                                            memmove(data_addr_rn + 1, data_addr_rn, data_len);
-                                            /* Put space in the end of User-Agent header */
-                                            *(char*)(data_addr_rn) = ' ';
-                                            should_recalc_checksum = 1;
-                                            //printf("Replaced Host header!\n");
-                                        }
-                                    } /* if (dara_addr_rn) */
-                                } /* if (host_len <= 253 && useragent_addr) */
-                            } /* if (data_addr_rn) */
-                        } /* else if (do_host_removespace) */
-                    } /* if (data_addr) */
-                } /* Handle OUTBOUND packet with data */
-            } /* Handle packet with data */
-
-            /* Else if we got TCP packet without data */
+            // reduce window size on non-data packet
             else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)) {
                 /* If we got SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && 
                     ppTcpHdr->Syn == 1) {
-                    //printf("Changing Window Size!\n");
+                    printf("Changing Window Size!\n");
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
                         change_window_size(packet, http_fragment_size);
-                        should_recalc_checksum = 1;
+                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
                     else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
                         change_window_size(packet, https_fragment_size);
-                        should_recalc_checksum = 1;
+                        WinDivertHelperCalcChecksums(packet, packetLen, 0);
                     }
                 }
             }
-
-            if (should_reinject) {
-                //printf("Re-injecting!\n");
-                if (should_recalc_checksum) {
-                    WinDivertHelperCalcChecksums(packet, packetLen, 0);
-                }
-                WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
-            }
+            // uncomment this to make it work
+            //WinDivertHelperCalcChecksums(packet, packetLen, 0);
+            WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
         }
         else {
             // error, ignore
