@@ -428,6 +428,10 @@ int main(int argc, char *argv[]) {
                 if (should_recalc_checksum) {
                     WinDivertHelperCalcChecksums(packet, packetLen, 0);
                 }
+                else {
+                    WinDivertHelperCalcChecksums(packet, packetLen,
+                                                 WINDIVERT_HELPER_NO_REPLACE);
+                }
                 WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
             }
         }
