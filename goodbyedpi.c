@@ -100,6 +100,17 @@ static void sigint_handler(int sig) {
     exit(EXIT_SUCCESS);
 }
 
+static void mix_case(char *pktdata, int pktlen) {
+    int i;
+
+    if (pktlen <= 0) return;
+    for (i = 0; i < pktlen; i++) {
+        if (i % 2) {
+            pktdata[i] = toupper(pktdata[i]);
+        }
+    }
+}
+
 static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
     /* First check if this is HTTP 302 redirect */
     if (memcmp(pktdata, http11_redirect_302, strlen(http11_redirect_302)) == 0 ||
@@ -188,7 +199,8 @@ int main(int argc, char *argv[]) {
 
     int do_passivedpi = 0, do_fragment_http = 0,
         do_fragment_https = 0, do_host = 0,
-        do_host_removespace = 0, do_additional_space = 0;
+        do_host_removespace = 0, do_additional_space = 0,
+        do_host_mixedcase = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
     char *host_addr, *useragent_addr, *method_addr;
@@ -205,7 +217,7 @@ int main(int argc, char *argv[]) {
             = do_fragment_http = do_fragment_https = 1;
     }
 
-    while ((opt = getopt(argc, argv, "1234prsaf:e:")) != -1) {
+    while ((opt = getopt(argc, argv, "1234prsaf:e:m")) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -236,6 +248,9 @@ int main(int argc, char *argv[]) {
                 do_additional_space = 1;
                 do_host_removespace = 1;
                 break;
+            case 'm':
+                do_host_mixedcase = 1;
+                break;
             case 'f':
                 do_fragment_http = 1;
                 http_fragment_size = atoi(optarg);
@@ -258,6 +273,7 @@ int main(int argc, char *argv[]) {
                 " -r          replace Host with hoSt\n"
                 " -s          remove space between host header and its value\n"
                 " -a          additional space between Method and Request-URI (enables -s, may break sites)\n"
+                " -m          mix Host header case (test.com -> tEsT.cOm)\n"
                 " -f [value]  set HTTP fragmentation to value\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
                 "\n"
@@ -270,10 +286,10 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
-           "hoSt: %d, Host no space: %d, Additional space: %d\n",
+           "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
-           do_host, do_host_removespace, do_additional_space);
+           do_host, do_host_removespace, do_additional_space, do_host_mixedcase);
 
     if (do_fragment_http && http_fragment_size > 2) {
         printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
@@ -348,7 +364,7 @@ int main(int argc, char *argv[]) {
                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
                         find_http_method_end(packet_data,
                                              (do_fragment_http ? http_fragment_size : 0)) &&
-                        (do_host || do_host_removespace))
+                        (do_host || do_host_removespace || do_host_mixedcase))
                 {
 
                     /* Find Host header */
@@ -357,6 +373,10 @@ int main(int argc, char *argv[]) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 
+                        if (do_host_mixedcase && host_len > 0 && host_len <= 253) {
+                            mix_case(host_addr, host_len);
+                            should_recalc_checksum = 1;
+                        }
 
                         if (do_host) {
                             /* Replace "Host: " with "hoSt: " */

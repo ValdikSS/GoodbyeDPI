@@ -19,6 +19,7 @@ Usage: goodbyedpi.exe [OPTION...]
  -f [value]  set HTTP fragmentation to value
  -e [value]  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
+ -m          mix Host header case (test.com -> tEsT.cOm)
 
  -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
@@ -26,7 +27,7 @@ Usage: goodbyedpi.exe [OPTION...]
  -4          -p -r -s (best speed)
 ```
 
-Try to run `goodbyedpi.exe -1 -a` first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
+Try to run `goodbyedpi.exe -1 -a -m` first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
 
 Try `-1` to see if it works too.
 
@@ -48,6 +49,7 @@ Active DPI is more tricky to fool. Currently the software uses 4 methods to circ
 * Replacing `Host` header with `hoSt`
 * Removing space between header name and value in `Host` header
 * Adding additional space between HTTP Method (GET, POST etc) and URI
+* Mixing case of Host header value
 
 These methods should not break any website as they're fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
 
