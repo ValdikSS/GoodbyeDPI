@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
@@ -15,7 +16,7 @@
     sleep(10); exit(EXIT_FAILURE); } while (0)
 
 #define MAX_FILTERS 4
-#define MAX_PACKET_SIZE 1516
+#define MAX_PACKET_SIZE 9016
 #define IPV4_HDR_LEN 20
 #define TCP_HDR_LEN 20
 #define IPV4_TOTALLEN_OFFSET 2
@@ -57,7 +58,7 @@ static const char *http_methods[] = {
 
 static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
     // naive implementation
-    if (nlen > hlen) return 0;
+    if (nlen > hlen) return NULL;
     int i;
     for (i=0; i<hlen-nlen+1; i++) {
         if (memcmp(haystack+i,needle,nlen)==0) {
@@ -83,9 +84,9 @@ static HANDLE init(char *filter, UINT64 flags) {
 static int deinit(HANDLE handle) {
     if (handle) {
         WinDivertClose(handle);
-        return 1;
+        return TRUE;
     }
-    return 0;
+    return FALSE;
 }
 
 static void deinit_all() {
@@ -107,26 +108,49 @@ static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
         /* Then check if this is a redirect to new http site with Connection: close */
         if (dumb_memmem(pktdata, pktlen, location_http, strlen(location_http)) &&
             dumb_memmem(pktdata, pktlen, connection_close, strlen(connection_close))) {
-            return 1;
+            return TRUE;
         }
     }
-    return 0;
+    return FALSE;
 }
 
-/* Finds Host header with \r\n before it */
-static PVOID find_host_header(const char *pktdata, int pktlen) {
-    return dumb_memmem(pktdata, pktlen,
-                http_host_find, strlen(http_host_find));
-}
+static int find_header_and_get_info(const char *pktdata, int pktlen,
+                const char *hdrname,
+                char **hdrnameaddr,
+                char **hdrvalueaddr, int *hdrvaluelen) {
+    char *data_addr_rn;
+    char *hdr_begin;
 
-/* Finds User-Agent header with \r\n before it */
-static PVOID find_useragent_header(const char *pktdata, int pktlen) {
-    return dumb_memmem(pktdata, pktlen,
-                http_useragent_find, strlen(http_useragent_find));
+    *hdrvaluelen = 0;
+    *hdrnameaddr = NULL;
+    *hdrvalueaddr = NULL;
+
+    /* Search for the header */
+    hdr_begin = dumb_memmem(pktdata, pktlen,
+                hdrname, strlen(hdrname));
+    if (!hdr_begin) return FALSE;
+    if ((PVOID)pktdata > (PVOID)hdr_begin) return FALSE;
+
+    /* Set header address */
+    *hdrnameaddr = hdr_begin;
+    *hdrvalueaddr = (PVOID)hdr_begin + strlen(hdrname);
+
+    /* Search for header end (\r\n) */
+    data_addr_rn = dumb_memmem(*hdrvalueaddr,
+                        pktlen - ((PVOID)*hdrvalueaddr - (PVOID)pktdata),
+                        "\r\n", 2);
+    if (data_addr_rn) {
+        *hdrvaluelen = (PVOID)data_addr_rn - (PVOID)*hdrvalueaddr;
+        if (*hdrvaluelen > 0 && *hdrvaluelen <= 512)
+            return TRUE;
+    }
+    return FALSE;
 }
 
 static void change_window_size(const char *pkt, int size) {
-    *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
+    if (size >= 1 && size <= 65535) {
+        *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
+    }
 }
 
 /* HTTP method end without trailing space */
@@ -167,8 +191,11 @@ int main(int argc, char *argv[]) {
         do_host_removespace = 0, do_additional_space = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
-    char *data_addr, *data_addr_rn, *host_addr, *useragent_addr, *method_addr;
-    int data_len, host_len;
+    char *host_addr, *useragent_addr, *method_addr;
+    int host_len, useragent_len;
+
+    char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
+    int hdr_value_len;
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
@@ -316,7 +343,7 @@ int main(int argc, char *argv[]) {
                         should_reinject = 0;
                     }
                 }
-                /* Handle OUTBOUND packet, search for Host header */
+                /* Handle OUTBOUND packet on port 80, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
                         packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
                         find_http_method_end(packet_data,
@@ -324,34 +351,42 @@ int main(int argc, char *argv[]) {
                         (do_host || do_host_removespace))
                 {
 
-                    data_addr = find_host_header(packet_data, packet_dataLen);
-                    if (data_addr) {
+                    /* Find Host header */
+                    if (find_header_and_get_info(packet_data, packet_dataLen,
+                        http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len)) {
+                        host_addr = hdr_value_addr;
+                        host_len = hdr_value_len;
+
 
                         if (do_host) {
                             /* Replace "Host: " with "hoSt: " */
-                            memcpy(data_addr, http_host_replace, strlen(http_host_replace));
+                            memcpy(hdr_name_addr, http_host_replace, strlen(http_host_replace));
                             should_recalc_checksum = 1;
                             //printf("Replaced Host header!\n");
                         }
 
+                        /* If removing space between host header and its value
+                         * and adding additional space between Method and Request-URI */
                         if (do_additional_space && do_host_removespace) {
                             /* End of "Host:" without trailing space */
-                            host_addr = data_addr + strlen(http_host_find) - 1;
                             method_addr = find_http_method_end(packet_data,
                                                             (do_fragment_http ? http_fragment_size : 0));
 
                             if (method_addr) {
-                                memmove(method_addr + 1, method_addr, (PVOID)host_addr - (PVOID)method_addr);
+                                memmove(method_addr + 1, method_addr,
+                                        (PVOID)host_addr - (PVOID)method_addr - 1);
                                 should_recalc_checksum = 1;
                             }
                         }
+                        /* If just removing space between host header and its value */
                         else if (do_host_removespace) {
-                            host_addr = data_addr + strlen(http_host_find);
+                            if (find_header_and_get_info(packet_data, packet_dataLen,
+                                                        http_useragent_find, &hdr_name_addr,
+                                                         &hdr_value_addr, &hdr_value_len))
+                            {
+                                useragent_addr = hdr_value_addr;
+                                useragent_len = hdr_value_len;
 
-                            data_addr_rn = dumb_memmem(host_addr,
-                                                       packet_dataLen - ((PVOID)host_addr - packet_data),
-                                                       "\r\n", 2);
-                            if (data_addr_rn) {
                                 /* We move Host header value by one byte to the left and then
                                  * "insert" stolen space to the end of User-Agent value because
                                  * some web servers are not tolerant to additional space in the
@@ -359,58 +394,48 @@ int main(int argc, char *argv[]) {
                                  *
                                  * Nothing is done if User-Agent header is missing.
                                  */
-                                host_len = data_addr_rn - host_addr;
-                                useragent_addr = find_useragent_header(packet_data, packet_dataLen);
-                                if (host_len <= 253 && useragent_addr) {
-                                    useragent_addr += strlen(http_useragent_find);
+                                if (host_len > 0 && host_len <= 253 &&
+                                    useragent_addr && useragent_len > 0) {
                                     /* useragent_addr is in the beginning of User-Agent value */
 
-                                    data_len = packet_dataLen - ((PVOID)useragent_addr - packet_data);
-                                    data_addr_rn = dumb_memmem(useragent_addr,
-                                                            data_len, "\r\n", 2);
-                                    /* data_addr_rn is in the end of User-Agent value */
+                                    if (useragent_addr > host_addr) {
+                                        /* Move one byte to the LEFT from "Host:"
+                                        * to the end of User-Agent
+                                        */
+                                        memmove(host_addr - 1, host_addr, useragent_len);
+                                        host_addr -= 1;
+                                        /* Put space in the end of User-Agent header */
+                                        *(char*)((PVOID)useragent_addr + useragent_len - 1) = ' ';
+                                        should_recalc_checksum = 1;
+                                        //printf("Replaced Host header!\n");
+                                    }
+                                    else {
+                                        /* User-Agent goes BEFORE Host header */
 
-                                    if (data_addr_rn) {
-                                        if (useragent_addr > host_addr) {
-                                            /* User-Agent goes AFTER Host header */
-                                            data_len = (PVOID)data_addr_rn - (PVOID)host_addr;
-
-                                            /* Move one byte to the LEFT from "Host:"
-                                            * to the end of User-Agent
-                                            */
-                                            memmove(host_addr - 1, host_addr, data_len);
-                                            /* Put space in the end of User-Agent header */
-                                            *(char*)(data_addr_rn - 1) = ' ';
-                                            should_recalc_checksum = 1;
-                                            //printf("Replaced Host header!\n");
-                                        }
-                                        else {
-                                            /* User-Agent goes BEFORE Host header */
-                                            data_len = (PVOID)host_addr - (PVOID)data_addr_rn - 1;
-
-                                            /* Move one byte to the RIGHT from the end of User-Agent
-                                            * to the "Host:"
-                                            */
-                                            memmove(data_addr_rn + 1, data_addr_rn, data_len);
-                                            /* Put space in the end of User-Agent header */
-                                            *(char*)(data_addr_rn) = ' ';
-                                            should_recalc_checksum = 1;
-                                            //printf("Replaced Host header!\n");
-                                        }
-                                    } /* if (dara_addr_rn) */
+                                        /* Move one byte to the RIGHT from the end of User-Agent
+                                        * to the "Host:"
+                                        */
+                                        memmove((PVOID)useragent_addr + useragent_len + 1,
+                                                (PVOID)useragent_addr + useragent_len,
+                                                useragent_len - 1);
+                                        /* Put space in the end of User-Agent header */
+                                        *(char*)((PVOID)useragent_addr + useragent_len) = ' ';
+                                        should_recalc_checksum = 1;
+                                        //printf("Replaced Host header!\n");
+                                    }
                                 } /* if (host_len <= 253 && useragent_addr) */
-                            } /* if (data_addr_rn) */
+                            } /* if (find_header_and_get_info http_useragent) */
                         } /* else if (do_host_removespace) */
-                    } /* if (data_addr) */
+                    } /* if (find_header_and_get_info http_host) */
                 } /* Handle OUTBOUND packet with data */
             } /* Handle packet with data */
 
             /* Else if we got TCP packet without data */
             else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)) {
-                /* If we got SYN+ACK packet */
+                /* If we got INBOUND SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && 
-                    ppTcpHdr->Syn == 1) {
+                    ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
                     //printf("Changing Window Size!\n");
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
                         change_window_size(packet, http_fragment_size);
