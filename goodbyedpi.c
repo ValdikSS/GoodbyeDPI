@@ -200,6 +200,7 @@ int main(int argc, char *argv[]) {
     int do_passivedpi = 0, do_fragment_http = 0,
         do_fragment_https = 0, do_host = 0,
         do_host_removespace = 0, do_additional_space = 0,
+        do_http_allports = 0,
         do_host_mixedcase = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
@@ -217,7 +218,7 @@ int main(int argc, char *argv[]) {
             = do_fragment_http = do_fragment_https = 1;
     }
 
-    while ((opt = getopt(argc, argv, "1234prsaf:e:m")) != -1) {
+    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mw", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -267,6 +268,9 @@ int main(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 break;
+            case 'w':
+                do_http_allports = 1;
+                break;
             default:
                 printf("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -276,6 +280,7 @@ int main(int argc, char *argv[]) {
                 " -m          mix Host header case (test.com -> tEsT.cOm)\n"
                 " -f [value]  set HTTP fragmentation to value\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
+                " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
                 "\n"
                 " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
@@ -286,10 +291,13 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
-           "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d\n",
+           "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d, "
+           "HTTP AllPorts: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
-           do_host, do_host_removespace, do_additional_space, do_host_mixedcase);
+           do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
+           do_http_allports
+          );
 
     if (do_fragment_http && http_fragment_size > 2) {
         printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
@@ -361,7 +369,8 @@ int main(int argc, char *argv[]) {
                 }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
-                        packet_dataLen > 16 && ppTcpHdr->DstPort == htons(80) &&
+                        packet_dataLen > 16 &&
+                        (do_http_allports ? 1 : (ppTcpHdr->DstPort == htons(80))) &&
                         find_http_method_end(packet_data,
                                              (do_fragment_http ? http_fragment_size : 0)) &&
                         (do_host || do_host_removespace || do_host_mixedcase))
