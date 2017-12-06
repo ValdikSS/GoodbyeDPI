@@ -16,10 +16,14 @@ Usage: goodbyedpi.exe [OPTION...]
  -p          block passive DPI
  -r          replace Host with hoSt
  -s          remove space between host header and its value
+ -m          mix Host header case (test.com -> tEsT.cOm)
  -f [value]  set HTTP fragmentation to value
  -e [value]  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
- -m          mix Host header case (test.com -> tEsT.cOm)
+ -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
+ --port      additional TCP port to perform fragmentation on (and HTTP tricks with -w)
+ --dns-addr  redirect UDP DNS requests to the supplied IP address (experimental)
+ --dns-port  redirect UDP DNS requests to the supplied port (53 by default)
 
  -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
@@ -27,7 +31,7 @@ Usage: goodbyedpi.exe [OPTION...]
  -4          -p -r -s (best speed)
 ```
 
-Try to run `goodbyedpi.exe -1 -a -m` first. If you can open blocked websites it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
+Try to run `goodbyedpi.exe -1 -a -m --dns-addr 77.88.8.8 --dns-port 1253` first. This is the most hardcore mode which will show if this program is suitable for your ISP and DPI vendor. If you can open blocked websites with these options, it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
 
 Try `-1` to see if it works too.
 
