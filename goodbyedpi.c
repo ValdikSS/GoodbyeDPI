@@ -10,6 +10,7 @@
 #include <string.h>
 #include <getopt.h>
 #include "windivert.h"
+#include "dnsredir.h"
 
 #define die() do { printf("Something went wrong!\n" \
     "Make sure you're running this program with administrator privileges\n"); \
@@ -58,6 +59,8 @@ static const char *http_methods[] = {
 
 static struct option long_options[] = {
     {"port",      required_argument, 0,  'z' },
+    {"dns-addr",  required_argument, 0,  'd' },
+    {"dns-port",  required_argument, 0,  'g' },
     {0,           0,                 0,   0  }
 };
 
@@ -230,14 +233,18 @@ int main(int argc, char *argv[]) {
     UINT packet_dataLen;
     PWINDIVERT_IPHDR ppIpHdr;
     PWINDIVERT_TCPHDR ppTcpHdr;
+    PWINDIVERT_UDPHDR ppUdpHdr;
+    conntrack_info_t dns_conn_info;
 
     int do_passivedpi = 0, do_fragment_http = 0,
         do_fragment_https = 0, do_host = 0,
         do_host_removespace = 0, do_additional_space = 0,
         do_http_allports = 0,
-        do_host_mixedcase = 0;
+        do_host_mixedcase = 0, do_dns_redirect = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
+    uint32_t dns_addr = 0;
+    uint16_t dns_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
     int host_len, useragent_len;
 
@@ -315,6 +322,24 @@ int main(int argc, char *argv[]) {
                 add_filter_str(IPPROTO_TCP, i);
                 i = 0;
                 break;
+            case 'd':
+                do_dns_redirect = 1;
+                dns_addr = inet_addr(optarg);
+                if (!dns_addr) {
+                    printf("DNS address parameter error!\n");
+                    exit(EXIT_FAILURE);
+                }
+                add_filter_str(IPPROTO_UDP, 53);
+                break;
+            case 'g':
+                dns_port = atoi(optarg);
+                if (dns_port <= 0 || dns_port > 65535) {
+                    printf("DNS port parameter error!\n");
+                    exit(EXIT_FAILURE);
+                }
+                add_filter_str(IPPROTO_UDP, dns_port);
+                dns_port = ntohs(dns_port);
+                break;
             default:
                 printf("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -326,6 +351,8 @@ int main(int argc, char *argv[]) {
                 " -e [value]  set HTTPS fragmentation to value\n"
                 " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
                 " --port      additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
+                " --dns-addr  redirect UDP DNS requests to the supplied IP address (experimental)\n"
+                " --dns-port  redirect UDP DNS requests to the supplied port (53 by default)\n"
                 "\n"
                 " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
@@ -337,11 +364,11 @@ int main(int argc, char *argv[]) {
 
     printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
            "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d, "
-           "HTTP AllPorts: %d\n",
+           "HTTP AllPorts: %d, DNS redirect: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
-           do_http_allports
+           do_http_allports, do_dns_redirect
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -391,7 +418,7 @@ int main(int argc, char *argv[]) {
             if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)) {
                 //printf("Got parsed packet, len=%d!\n", packet_dataLen);
-                /* Got a packet WITH DATA */
+                /* Got a TCP packet WITH DATA */
 
                 /* Handle INBOUND packet with data and find HTTP REDIRECT in there */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && packet_dataLen > 16) {
@@ -493,13 +520,13 @@ int main(int argc, char *argv[]) {
                         } /* else if (do_host_removespace) */
                     } /* if (find_header_and_get_info http_host) */
                 } /* Handle OUTBOUND packet with data */
-            } /* Handle packet with data */
+            } /* Handle TCP packet with data */
 
             /* Else if we got TCP packet without data */
             else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)) {
                 /* If we got INBOUND SYN+ACK packet */
-                if (addr.Direction == WINDIVERT_DIRECTION_INBOUND && 
+                if (addr.Direction == WINDIVERT_DIRECTION_INBOUND &&
                     ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
                     //printf("Changing Window Size!\n");
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
@@ -509,6 +536,45 @@ int main(int argc, char *argv[]) {
                     else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
                         change_window_size(packet, https_fragment_size);
                         should_recalc_checksum = 1;
+                    }
+                }
+            }
+
+            /* Else if we got UDP packet with data */
+            else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
+                NULL, NULL, NULL, NULL, &ppUdpHdr, &packet_data, &packet_dataLen)) {
+
+                if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
+                    if (dns_handle_incoming(ppIpHdr->DstAddr, ppUdpHdr->DstPort,
+                                        ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
+                                        packet_data, packet_dataLen,
+                                        &dns_conn_info))
+                    {
+                        /* Changing source IP and port to the values
+                         * from DNS conntrack */
+                        ppIpHdr->SrcAddr = dns_conn_info.dstip;
+                        ppUdpHdr->DstPort = dns_conn_info.srcport;
+                        ppUdpHdr->SrcPort = dns_conn_info.dstport;
+                        should_recalc_checksum = 1;
+                    }
+                    else {
+                        printf("[DNS] Error handling incoming packet!\n");
+                    }
+                }
+
+                else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND) {
+                    if (dns_handle_outgoing(ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
+                                        ppIpHdr->DstAddr, ppUdpHdr->DstPort,
+                                        packet_data, packet_dataLen))
+                    {
+                        /* Changing destination IP and port to the values
+                         * from configuration */
+                        ppIpHdr->DstAddr = dns_addr;
+                        ppUdpHdr->DstPort = dns_port;
+                        should_recalc_checksum = 1;
+                    }
+                    else {
+                        printf("[DNS] Error handling outgoing packet!\n");
                     }
                 }
             }
