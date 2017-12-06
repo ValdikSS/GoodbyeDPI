@@ -8,7 +8,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
-#include <winsock2.h>
+#include <getopt.h>
 #include "windivert.h"
 
 #define die() do { printf("Something went wrong!\n" \
@@ -55,6 +55,40 @@ static const char *http_methods[] = {
     "CONNECT ",
     "OPTIONS ",
 };
+
+static struct option long_options[] = {
+    {"port",      required_argument, 0,  'z' },
+    {0,           0,                 0,   0  }
+};
+
+static char *filter_string = "(ip and tcp and "
+        "(inbound and (("
+         "((ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) or "
+         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
+         ") and " DIVERT_NO_LOCALNETS_SRC ") or "
+        "(outbound and "
+         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and "
+         DIVERT_NO_LOCALNETS_DST ")"
+        "))";
+
+static void add_filter_str(int proto, int port) {
+    const char *udp = " or (ip and udp and (udp.SrcPort == %d or udp.DstPort == %d))";
+    const char *tcp = " or (ip and tcp and (tcp.SrcPort == %d or tcp.DstPort == %d))";
+
+    char *current_filter = filter_string;
+    int new_filter_size = strlen(current_filter) +
+            (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
+    char *new_filter = malloc(new_filter_size);
+
+    strcpy(new_filter, current_filter);
+    if (proto == IPPROTO_UDP)
+        sprintf(&(new_filter[strlen(new_filter)]), udp, port, port);
+    else
+        sprintf(&(new_filter[strlen(new_filter)]), tcp, port, port);
+
+    filter_string = new_filter;
+    free(current_filter);
+}
 
 static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
     // naive implementation
@@ -271,6 +305,16 @@ int main(int argc, char *argv[]) {
             case 'w':
                 do_http_allports = 1;
                 break;
+            case 'z':
+                /* i is used as a temporary variable here */
+                i = atoi(optarg);
+                if (i <= 0 || i > 65535) {
+                    printf("Port parameter error!\n");
+                    exit(EXIT_FAILURE);
+                }
+                add_filter_str(IPPROTO_TCP, i);
+                i = 0;
+                break;
             default:
                 printf("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -281,6 +325,7 @@ int main(int argc, char *argv[]) {
                 " -f [value]  set HTTP fragmentation to value\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
                 " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
+                " --port      additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
                 "\n"
                 " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
@@ -323,16 +368,7 @@ int main(int argc, char *argv[]) {
      * IPv4 filter for inbound HTTP redirection packets and
      * active DPI circumvention
      */
-    filters[filter_num] = init("ip and tcp and "
-        "(inbound and (("
-         "((ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) or "
-         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
-         ") and " DIVERT_NO_LOCALNETS_SRC ") or "
-        "(outbound and "
-         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and "
-         DIVERT_NO_LOCALNETS_DST ")"
-        ")",
-        0);
+    filters[filter_num] = init(filter_string, 0);
 
     w_filter = filters[filter_num];
     filter_num++;
