@@ -22,6 +22,7 @@
 #define TCP_HDR_LEN 20
 #define IPV4_TOTALLEN_OFFSET 2
 #define TCP_WINDOWSIZE_OFFSET 14
+#define HOST_MAXLEN 253
 
 #define DIVERT_NO_LOCALNETS_DST "(" \
                    "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
@@ -462,7 +463,7 @@ int main(int argc, char *argv[]) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 
-                        if (do_host_mixedcase && host_len > 0 && host_len <= 253) {
+                        if (do_host_mixedcase && host_len > 0 && host_len <= HOST_MAXLEN) {
                             mix_case(host_addr, host_len);
                             should_recalc_checksum = 1;
                         }
@@ -503,7 +504,7 @@ int main(int argc, char *argv[]) {
                                  *
                                  * Nothing is done if User-Agent header is missing.
                                  */
-                                if (host_len > 0 && host_len <= 253 &&
+                                if (host_len > 0 && host_len <= HOST_MAXLEN &&
                                     useragent_addr && useragent_len > 0) {
                                     /* useragent_addr is in the beginning of User-Agent value */
 
@@ -532,7 +533,7 @@ int main(int argc, char *argv[]) {
                                         should_recalc_checksum = 1;
                                         //printf("Replaced Host header!\n");
                                     }
-                                } /* if (host_len <= 253 && useragent_addr) */
+                                } /* if (host_len <= HOST_MAXLEN && useragent_addr) */
                             } /* if (find_header_and_get_info http_useragent) */
                         } /* else if (do_host_removespace) */
                     } /* if (find_header_and_get_info http_host) */
