@@ -337,6 +337,7 @@ int main(int argc, char *argv[]) {
                         exit(EXIT_FAILURE);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
+                    flush_dns_cache();
                 }
                 break;
             case 'g':

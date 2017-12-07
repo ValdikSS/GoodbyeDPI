@@ -50,6 +50,22 @@ typedef struct udp_connrecord {
 static time_t last_cleanup = 0;
 static udp_connrecord_t *conntrack = NULL;
 
+void flush_dns_cache() {
+    BOOL WINAPI (*DnsFlushResolverCache)();
+
+    HMODULE dnsapi = LoadLibrary("dnsapi.dll");
+    if (dnsapi == NULL)
+    {
+        printf("Can't load dnsapi.dll to flush DNS cache!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    DnsFlushResolverCache = GetProcAddress(dnsapi, "DnsFlushResolverCache");
+    if (DnsFlushResolverCache == NULL || !DnsFlushResolverCache())
+        printf("Can't flush DNS cache!");
+    FreeLibrary(dnsapi);
+}
+
 inline static void construct_key(const uint32_t srcip, const uint16_t srcport, char *key) {
     debug("Construct key enter\n");
     if (key) {

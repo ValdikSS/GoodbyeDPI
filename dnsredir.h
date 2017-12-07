@@ -15,3 +15,5 @@ int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
 int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
                         const uint32_t dstip, const uint16_t dstport,
                         const char *packet_data, const UINT packet_dataLen);
+
+void flush_dns_cache();
