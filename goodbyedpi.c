@@ -64,7 +64,8 @@ static struct option long_options[] = {
     {0,           0,                 0,   0  }
 };
 
-static char *filter_string = "(ip and tcp and "
+static char *filter_string = NULL;
+static char *filter_string_template = "(ip and tcp and "
         "(inbound and (("
          "((ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) or "
          "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
@@ -251,6 +252,11 @@ int main(int argc, char *argv[]) {
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     int hdr_value_len;
 
+    if (filter_string == NULL) {
+        filter_string = malloc(strlen(filter_string_template) + 1);
+        strcpy(filter_string, filter_string_template);
+    }
+
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
     if (argc == 1) {
@@ -323,21 +329,31 @@ int main(int argc, char *argv[]) {
                 i = 0;
                 break;
             case 'd':
-                do_dns_redirect = 1;
-                dns_addr = inet_addr(optarg);
-                if (!dns_addr) {
-                    printf("DNS address parameter error!\n");
-                    exit(EXIT_FAILURE);
+                if (!do_dns_redirect) {
+                    do_dns_redirect = 1;
+                    dns_addr = inet_addr(optarg);
+                    if (!dns_addr) {
+                        printf("DNS address parameter error!\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    add_filter_str(IPPROTO_UDP, 53);
                 }
-                add_filter_str(IPPROTO_UDP, 53);
                 break;
             case 'g':
+                if (!do_dns_redirect) {
+                    printf("--dns-port should be used with --dns-addr!\n"
+                        "Make sure you use --dns-addr and pass it before "
+                        "--dns-port\n");
+                    exit(EXIT_FAILURE);
+                }
                 dns_port = atoi(optarg);
                 if (dns_port <= 0 || dns_port > 65535) {
                     printf("DNS port parameter error!\n");
                     exit(EXIT_FAILURE);
                 }
-                add_filter_str(IPPROTO_UDP, dns_port);
+                if (dns_port != 53) {
+                    add_filter_str(IPPROTO_UDP, dns_port);
+                }
                 dns_port = ntohs(dns_port);
                 break;
             default:
