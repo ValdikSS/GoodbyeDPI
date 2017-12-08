@@ -559,7 +559,7 @@ int main(int argc, char *argv[]) {
             }
 
             /* Else if we got UDP packet with data */
-            else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
+            else if (do_dns_redirect && WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
                 NULL, NULL, NULL, NULL, &ppUdpHdr, &packet_data, &packet_dataLen)) {
 
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
