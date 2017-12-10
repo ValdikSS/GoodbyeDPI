@@ -326,7 +326,8 @@ int main(int argc, char *argv[]) {
                     printf("Port parameter error!\n");
                     exit(EXIT_FAILURE);
                 }
-                add_filter_str(IPPROTO_TCP, i);
+                if (i != 80 && i != 443)
+                    add_filter_str(IPPROTO_TCP, i);
                 i = 0;
                 break;
             case 'd':

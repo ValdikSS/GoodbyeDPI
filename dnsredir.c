@@ -60,7 +60,7 @@ void flush_dns_cache() {
         exit(EXIT_FAILURE);
     }
 
-    DnsFlushResolverCache = GetProcAddress(dnsapi, "DnsFlushResolverCache");
+    DnsFlushResolverCache = (void*)GetProcAddress(dnsapi, "DnsFlushResolverCache");
     if (DnsFlushResolverCache == NULL || !DnsFlushResolverCache())
         printf("Can't flush DNS cache!");
     FreeLibrary(dnsapi);
