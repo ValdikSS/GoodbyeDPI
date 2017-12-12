@@ -513,7 +513,8 @@ int main(int argc, char *argv[]) {
                                         /* Move one byte to the LEFT from "Host:"
                                         * to the end of User-Agent
                                         */
-                                        memmove(host_addr - 1, host_addr, useragent_len);
+                                        memmove(host_addr - 1, host_addr,
+                                                (PVOID)useragent_addr + useragent_len - (PVOID)host_addr);
                                         host_addr -= 1;
                                         /* Put space in the end of User-Agent header */
                                         *(char*)((PVOID)useragent_addr + useragent_len - 1) = ' ';
@@ -528,7 +529,7 @@ int main(int argc, char *argv[]) {
                                         */
                                         memmove((PVOID)useragent_addr + useragent_len + 1,
                                                 (PVOID)useragent_addr + useragent_len,
-                                                useragent_len - 1);
+                                                (PVOID)host_addr - 1 - ((PVOID)useragent_addr + useragent_len));
                                         /* Put space in the end of User-Agent header */
                                         *(char*)((PVOID)useragent_addr + useragent_len) = ' ';
                                         should_recalc_checksum = 1;
