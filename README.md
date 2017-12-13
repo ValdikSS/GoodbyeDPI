@@ -65,11 +65,11 @@ This project can be build using **GNU Make** and [**mingw**](https://mingw-w64.o
 
 To build x86 exe run:
 
-`make CPREFIX=i686-w64-mingw32 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/x86`
+`make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/x86`
 
 And for x86_64:
 
-`make CPREFIX=x86_64-w64-mingw32 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
+`make CPREFIX=x86_64-w64-mingw32- WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
 
 # How to install as Windows Service
 
