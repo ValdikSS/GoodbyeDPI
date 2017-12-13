@@ -1,12 +1,15 @@
-CPREFIX = x86_64-w64-mingw32
+ifndef MSYSTEM
+	CPREFIX = x86_64-w64-mingw32-
+endif
+
 WINDIVERTHEADERS = ../../include
 WINDIVERTLIBS = ../binary
 
 TARGET = goodbyedpi.exe
-LIBS = -L $(WINDIVERTLIBS) -lWinDivert -lws2_32
-CC = $(CPREFIX)-gcc
-CCWINDRES = $(CPREFIX)-windres
-CFLAGS = -Wall -I $(WINDIVERTHEADERS) -L $(WINDIVERTLIBS) \
+LIBS = -L$(WINDIVERTLIBS) -lWinDivert -lws2_32
+CC = $(CPREFIX)gcc
+CCWINDRES = $(CPREFIX)windres
+CFLAGS = -Wall -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -O2 -pie -fPIE -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2
 LDFLAGS = -pie
 
