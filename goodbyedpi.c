@@ -10,7 +10,9 @@
 #include <string.h>
 #include <getopt.h>
 #include "windivert.h"
+#include "goodbyedpi.h"
 #include "dnsredir.h"
+#include "blackwhitelist.h"
 
 #define die() do { printf("Something went wrong!\n" \
     "Make sure you're running this program with administrator privileges\n"); \
@@ -22,7 +24,6 @@
 #define TCP_HDR_LEN 20
 #define IPV4_TOTALLEN_OFFSET 2
 #define TCP_WINDOWSIZE_OFFSET 14
-#define HOST_MAXLEN 253
 
 #define DIVERT_NO_LOCALNETS_DST "(" \
                    "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
@@ -63,6 +64,7 @@ static struct option long_options[] = {
     {"dns-addr",  required_argument, 0,  'd' },
     {"dns-port",  required_argument, 0,  'g' },
     {"dns-verb",  no_argument,       0,  'v' },
+    {"blacklist", required_argument, 0,  'b' },
     {0,           0,                 0,   0  }
 };
 
@@ -244,7 +246,7 @@ int main(int argc, char *argv[]) {
         do_host_removespace = 0, do_additional_space = 0,
         do_http_allports = 0,
         do_host_mixedcase = 0, do_dns_redirect = 0,
-        do_dns_verb = 0;
+        do_dns_verb = 0, do_blacklist = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
     uint32_t dns_addr = 0;
@@ -364,6 +366,13 @@ int main(int argc, char *argv[]) {
             case 'v':
                 do_dns_verb = 1;
                 break;
+            case 'b':
+                do_blacklist = 1;
+                if (!blackwhitelist_load_list(optarg)) {
+                    printf("Can't load blacklist from file!\n");
+                    exit(EXIT_FAILURE);
+                }
+                break;
             default:
                 printf("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -378,6 +387,8 @@ int main(int argc, char *argv[]) {
                 " --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)\n"
                 " --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)\n"
                 " --dns-verb             print verbose DNS redirection messages\n"
+                " --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
+                "                        supplied text file. This option can be supplied multiple times.\n"
                 "\n"
                 " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
@@ -466,11 +477,13 @@ int main(int argc, char *argv[]) {
 
                     /* Find Host header */
                     if (find_header_and_get_info(packet_data, packet_dataLen,
-                        http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len)) {
+                        http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len) &&
+                        hdr_value_len > 0 && hdr_value_len <= HOST_MAXLEN &&
+                        (do_blacklist ? blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1)) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 
-                        if (do_host_mixedcase && host_len > 0 && host_len <= HOST_MAXLEN) {
+                        if (do_host_mixedcase) {
                             mix_case(host_addr, host_len);
                             should_recalc_checksum = 1;
                         }
@@ -511,8 +524,7 @@ int main(int argc, char *argv[]) {
                                  *
                                  * Nothing is done if User-Agent header is missing.
                                  */
-                                if (host_len > 0 && host_len <= HOST_MAXLEN &&
-                                    useragent_addr && useragent_len > 0) {
+                                if (useragent_addr && useragent_len > 0) {
                                     /* useragent_addr is in the beginning of User-Agent value */
 
                                     if (useragent_addr > host_addr) {

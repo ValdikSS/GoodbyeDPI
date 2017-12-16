@@ -13,6 +13,7 @@
 #include <windows.h>
 #include <time.h>
 #include <stdio.h>
+#include "goodbyedpi.h"
 #include "dnsredir.h"
 #include "uthash.h"
 
@@ -20,12 +21,6 @@
 #define UDP_CONNRECORD_KEY_LEN 6
 
 #define DNS_CLEANUP_INTERVAL_SEC 30
-
-#ifndef debug
-#define debug(...) do {} while (0)
-#else
-#define debug(...) printf(...)
-#endif
 
 /* HACK!
  * uthash uses strlen() for HASH_FIND_STR.

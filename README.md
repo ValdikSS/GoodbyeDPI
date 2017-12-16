@@ -25,6 +25,8 @@ Usage: goodbyedpi.exe [OPTION...]
  --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)
  --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)
  --dns-verb             print verbose DNS redirection messages
+ --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from
+                        supplied text file. This option can be supplied multiple times.
 
  -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
