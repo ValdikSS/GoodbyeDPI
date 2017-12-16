@@ -72,6 +72,8 @@ int blackwhitelist_load_list(const char *filename) {
                 line);
             continue;
         }
+        if (strlen(line) < 4)
+            continue;
         if (add_hostname(line))
             cnt++;
     }
