@@ -21,10 +21,10 @@ Usage: goodbyedpi.exe [OPTION...]
  -e [value]  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
  -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
- --port      additional TCP port to perform fragmentation on (and HTTP tricks with -w)
- --dns-addr  redirect UDP DNS requests to the supplied IP address (experimental)
- --dns-port  redirect UDP DNS requests to the supplied port (53 by default)
- --dns-verb  print verbose DNS redirection messages
+ --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
+ --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)
+ --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)
+ --dns-verb             print verbose DNS redirection messages
 
  -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
