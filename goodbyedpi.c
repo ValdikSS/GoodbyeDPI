@@ -62,6 +62,7 @@ static struct option long_options[] = {
     {"port",      required_argument, 0,  'z' },
     {"dns-addr",  required_argument, 0,  'd' },
     {"dns-port",  required_argument, 0,  'g' },
+    {"dns-verb",  no_argument,       0,  'v' },
     {0,           0,                 0,   0  }
 };
 
@@ -242,7 +243,8 @@ int main(int argc, char *argv[]) {
         do_fragment_https = 0, do_host = 0,
         do_host_removespace = 0, do_additional_space = 0,
         do_http_allports = 0,
-        do_host_mixedcase = 0, do_dns_redirect = 0;
+        do_host_mixedcase = 0, do_dns_redirect = 0,
+        do_dns_verb = 0;
     int http_fragment_size = 2;
     int https_fragment_size = 2;
     uint32_t dns_addr = 0;
@@ -358,6 +360,9 @@ int main(int argc, char *argv[]) {
                     add_filter_str(IPPROTO_UDP, dns_port);
                 }
                 dns_port = ntohs(dns_port);
+                break;
+            case 'v':
+                do_dns_verb = 1;
                 break;
             default:
                 printf("Usage: goodbyedpi.exe [OPTION...]\n"
@@ -578,7 +583,13 @@ int main(int argc, char *argv[]) {
                         should_recalc_checksum = 1;
                     }
                     else {
-                        printf("[DNS] Error handling incoming packet!\n");
+                        if (dns_is_dns_packet(packet_data, packet_dataLen, 0))
+                            should_reinject = 0;
+
+                        if (do_dns_verb && !should_reinject) {
+                            printf("[DNS] Error handling incoming packet: srcport = %hu, dstport = %hu\n",
+                               ntohs(ppUdpHdr->SrcPort), ntohs(ppUdpHdr->DstPort));
+                        }
                     }
                 }
 
@@ -594,7 +605,13 @@ int main(int argc, char *argv[]) {
                         should_recalc_checksum = 1;
                     }
                     else {
-                        printf("[DNS] Error handling outgoing packet!\n");
+                        if (dns_is_dns_packet(packet_data, packet_dataLen, 1))
+                            should_reinject = 0;
+
+                        if (do_dns_verb && !should_reinject) {
+                            printf("[DNS] Error handling outgoing packet: srcport = %hu, dstport = %hu\n",
+                               ntohs(ppUdpHdr->SrcPort), ntohs(ppUdpHdr->DstPort));
+                        }
                     }
                 }
             }

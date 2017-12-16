@@ -24,6 +24,7 @@ Usage: goodbyedpi.exe [OPTION...]
  --port      additional TCP port to perform fragmentation on (and HTTP tricks with -w)
  --dns-addr  redirect UDP DNS requests to the supplied IP address (experimental)
  --dns-port  redirect UDP DNS requests to the supplied port (53 by default)
+ --dns-verb  print verbose DNS redirection messages
 
  -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)

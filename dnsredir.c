@@ -23,9 +23,7 @@
 
 #ifndef debug
 #define debug(...) do {} while (0)
-#endif
-
-#ifndef debug
+#else
 #define debug(...) printf(...)
 #endif
 
@@ -146,6 +144,18 @@ void dns_cleanup() {
     }
 }
 
+int dns_is_dns_packet(const char *packet_data, const UINT packet_dataLen, const int outgoing) {
+    if (outgoing && (ntohs(*(const uint16_t*)(packet_data + 2)) & 0xFA00) == 0 &&
+        (ntohs(*(const uint32_t*)(packet_data + 6))) == 0) {
+        return TRUE;
+    }
+    else if (!outgoing &&
+        (ntohs(*(const uint16_t*)(packet_data + 2)) & 0xF800) == 0x8000) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
                         const uint32_t dstip, const uint16_t dstport,
                         const char *packet_data, const UINT packet_dataLen) {
@@ -155,8 +165,7 @@ int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
 
     dns_cleanup();
 
-    if ((ntohs(*(const uint16_t*)(packet_data + 2)) & 0xFA00) == 0 &&
-        (ntohs(*(const uint32_t*)(packet_data + 6))) == 0) {
+    if (dns_is_dns_packet(packet_data, packet_dataLen, 1)) {
         /* Looks like DNS request */
         debug("trying to add srcport = %hu, dstport = %hu\n", ntohs(srcport), ntohs(dstport));
         return add_udp_conntrack(srcip, srcport, dstip, dstport);
@@ -178,7 +187,7 @@ int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
 
     dns_cleanup();
 
-    if ((ntohs(*(const uint16_t*)(packet_data + 2)) & 0xF800) == 0x8000) {
+    if (dns_is_dns_packet(packet_data, packet_dataLen, 0)) {
         /* Looks like DNS response */
         construct_key(srcip, srcport, key);
         if (check_get_udp_conntrack_key(key, &tmp_connrecord) && tmp_connrecord) {
