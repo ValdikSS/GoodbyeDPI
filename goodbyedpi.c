@@ -137,7 +137,7 @@ static void deinit_all() {
     }
 }
 
-static void sigint_handler(int sig) {
+static void sigint_handler(int sig __attribute__((unused))) {
     deinit_all();
     exit(EXIT_SUCCESS);
 }
@@ -208,7 +208,7 @@ static void change_window_size(const char *pkt, int size) {
 
 /* HTTP method end without trailing space */
 static PVOID find_http_method_end(const char *pkt, int offset) {
-    int i;
+    unsigned int i;
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
             return (char*)pkt + strlen(http_methods[i]) - 1;
@@ -285,6 +285,7 @@ int main(int argc, char *argv[]) {
                 do_passivedpi = do_host = do_host_removespace \
                 = do_fragment_https = 1;
                 https_fragment_size = 40;
+                break;
             case '4':
                 do_passivedpi = do_host = do_host_removespace = 1;
                 break;
@@ -354,7 +355,7 @@ int main(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 dns_port = atoi(optarg);
-                if (dns_port <= 0 || dns_port > 65535) {
+                if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
                     printf("DNS port parameter error!\n");
                     exit(EXIT_FAILURE);
                 }
@@ -584,7 +585,6 @@ int main(int argc, char *argv[]) {
 
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
                     if (dns_handle_incoming(ppIpHdr->DstAddr, ppUdpHdr->DstPort,
-                                        ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
                                         packet_data, packet_dataLen,
                                         &dns_conn_info))
                     {

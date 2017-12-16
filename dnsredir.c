@@ -141,6 +141,8 @@ void dns_cleanup() {
 }
 
 int dns_is_dns_packet(const char *packet_data, const UINT packet_dataLen, const int outgoing) {
+    if (packet_dataLen < 16) return FALSE;
+
     if (outgoing && (ntohs(*(const uint16_t*)(packet_data + 2)) & 0xFA00) == 0 &&
         (ntohs(*(const uint32_t*)(packet_data + 6))) == 0) {
         return TRUE;
@@ -171,7 +173,6 @@ int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
 }
 
 int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
-                        const uint32_t dstip, const uint16_t dstport,
                         const char *packet_data, const UINT packet_dataLen,
                         conntrack_info_t *conn_info) {
 

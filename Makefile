@@ -9,9 +9,9 @@ TARGET = goodbyedpi.exe
 LIBS = -L$(WINDIVERTLIBS) -lWinDivert -lws2_32
 CC = $(CPREFIX)gcc
 CCWINDRES = $(CPREFIX)windres
-CFLAGS = -Wall -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
+CFLAGS = -Wall -Wextra -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -O2 -pie -fPIE -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2
-LDFLAGS = -pie
+LDFLAGS = -Wl,-O1,--sort-common,--as-needed
 
 .PHONY: default all clean
 
@@ -30,7 +30,7 @@ manifest:
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(LIBS) -s -o $@
+	$(CC) $(OBJECTS) -Wall $(LDFLAGS) $(LIBS) -s -o $@
 
 clean:
 	-rm -f *.o
