@@ -106,10 +106,10 @@ static int check_get_udp_conntrack_key(const char *key, udp_connrecord_t **connr
 
 static int add_udp_conntrack(const uint32_t srcip, const uint16_t srcport,
                              const uint32_t dstip, const uint16_t dstport) {
-    udp_connrecord_t *tmp_connrecord = malloc(sizeof(udp_connrecord_t));
     if (!(srcip && srcport && dstip && dstport))
         return FALSE;
 
+    udp_connrecord_t *tmp_connrecord = malloc(sizeof(udp_connrecord_t));
     construct_key(srcip, srcport, tmp_connrecord->key);
 
     if (!check_get_udp_conntrack_key(tmp_connrecord->key, NULL)) {
@@ -121,6 +121,7 @@ static int add_udp_conntrack(const uint32_t srcip, const uint16_t srcport,
         return TRUE;
     }
     debug("Not added UDP conntrack\n");
+    free(tmp_connrecord);
     return FALSE;
 }
 
