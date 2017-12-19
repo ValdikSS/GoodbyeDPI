@@ -119,6 +119,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                   NULL, GetLastError(), MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                   (LPTSTR)&errormessage, 0, NULL);
     printf("%s", errormessage);
+    free(errormessage);
     return NULL;
 }
 
