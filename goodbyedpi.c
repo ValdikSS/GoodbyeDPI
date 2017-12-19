@@ -38,7 +38,23 @@
                    "(ip.SrcAddr < 172.16.0.0 or ip.SrcAddr > 172.31.255.255) and " \
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
                    ")"
-    
+
+#define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
+    if (!http_fragment_size) { \
+        http_fragment_size = fragment_size; \
+        if (http_fragment_size <= 0 || http_fragment_size > 65535) { \
+            printf(fragment_size_message); \
+            exit(EXIT_FAILURE); \
+        } \
+    } \
+    else if (http_fragment_size != fragment_size) { \
+        printf( \
+            "WARNING: HTTP fragment size is already set to %d, not changing.\n", \
+            http_fragment_size \
+        ); \
+    } \
+} while (0)
+
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
 static const char *http10_redirect_302 = "HTTP/1.0 302 ";
@@ -207,19 +223,23 @@ static void change_window_size(const char *pkt, int size) {
 }
 
 /* HTTP method end without trailing space */
-static PVOID find_http_method_end(const char *pkt, int offset) {
+static PVOID find_http_method_end(const char *pkt, int http_frag, int *is_fragmented) {
     unsigned int i;
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
+            if (is_fragmented)
+                *is_fragmented = 0;
             return (char*)pkt + strlen(http_methods[i]) - 1;
         }
         /* Try to find HTTP method in a second part of fragmented packet */
-        if ((offset == 1 || offset == 2) &&
-            memcmp(pkt, http_methods[i] + offset,
-                   strlen(http_methods[i]) - offset) == 0
+        if ((http_frag == 1 || http_frag == 2) &&
+            memcmp(pkt, http_methods[i] + http_frag,
+                   strlen(http_methods[i]) - http_frag) == 0
            )
         {
-            return (char*)pkt + strlen(http_methods[i]) - offset - 1;
+            if (is_fragmented)
+                *is_fragmented = 1;
+            return (char*)pkt + strlen(http_methods[i]) - http_frag - 1;
         }
     }
     return NULL;
@@ -242,6 +262,8 @@ int main(int argc, char *argv[]) {
     conntrack_info_t dns_conn_info;
 
     int do_passivedpi = 0, do_fragment_http = 0,
+        do_fragment_http_persistent = 0,
+        do_fragment_http_persistent_nowait = 0,
         do_fragment_https = 0, do_host = 0,
         do_host_removespace = 0, do_additional_space = 0,
         do_http_allports = 0,
@@ -253,6 +275,7 @@ int main(int argc, char *argv[]) {
     uint16_t dns_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
     int host_len, useragent_len;
+    int http_req_fragmented;
 
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     int hdr_value_len;
@@ -270,15 +293,19 @@ int main(int argc, char *argv[]) {
             = do_fragment_http = do_fragment_https = 1;
     }
 
-    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mw", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
-                = do_fragment_http = do_fragment_https = 1;
+                = do_fragment_http = do_fragment_https \
+                = do_fragment_http_persistent \
+                = do_fragment_http_persistent_nowait = 1;
                 break;
             case '2':
                 do_passivedpi = do_host = do_host_removespace \
-                = do_fragment_http = do_fragment_https = 1;
+                = do_fragment_http = do_fragment_https \
+                = do_fragment_http_persistent \
+                = do_fragment_http_persistent_nowait = 1;
                 https_fragment_size = 40;
                 break;
             case '3':
@@ -307,11 +334,14 @@ int main(int argc, char *argv[]) {
                 break;
             case 'f':
                 do_fragment_http = 1;
-                http_fragment_size = atoi(optarg);
-                if (http_fragment_size <= 0 || http_fragment_size > 65535) {
-                    printf(fragment_size_message);
-                    exit(EXIT_FAILURE);
-                }
+                SET_HTTP_FRAGMENT_SIZE_OPTION(atoi(optarg));
+                break;
+            case 'k':
+                do_fragment_http_persistent = 1;
+                SET_HTTP_FRAGMENT_SIZE_OPTION(atoi(optarg));
+                break;
+            case 'n':
+                do_fragment_http_persistent_nowait = 1;
                 break;
             case 'e':
                 do_fragment_https = 1;
@@ -382,6 +412,8 @@ int main(int argc, char *argv[]) {
                 " -a          additional space between Method and Request-URI (enables -s, may break sites)\n"
                 " -m          mix Host header case (test.com -> tEsT.cOm)\n"
                 " -f [value]  set HTTP fragmentation to value\n"
+                " -k [value]  enable HTTP persistent (keep-alive) fragmentation and set it to value\n"
+                " -n          do not wait for first segment ACK when -k is enabled\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
                 " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
                 " --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
@@ -391,21 +423,23 @@ int main(int argc, char *argv[]) {
                 " --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
                 "                        supplied text file. This option can be supplied multiple times.\n"
                 "\n"
-                " -1          -p -r -s -f 2 -e 2 (most compatible mode, default)\n"
-                " -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)\n"
-                " -3          -p -r -s -e 40 (even better speed)\n"
+                " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
+                " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
+                " -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)\n"
                 " -4          -p -r -s (best speed)\n");
                 exit(EXIT_FAILURE);
         }
     }
 
-    printf("Block passive: %d, Fragment HTTP: %d, Fragment HTTPS: %d, "
+    printf("Block passive: %d, Fragment HTTP: %d, Fragment persistent HTTP: %d, "
+           "Fragment HTTPS: %d, "
            "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d, "
-           "HTTP AllPorts: %d, DNS redirect: %d\n",
+           "HTTP AllPorts: %d, HTTP Persistent Nowait: %d, DNS redirect: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
+           (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
-           do_http_allports, do_dns_redirect
+           do_http_allports, do_fragment_http_persistent_nowait, do_dns_redirect
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -472,17 +506,67 @@ int main(int argc, char *argv[]) {
                         packet_dataLen > 16 &&
                         (do_http_allports ? 1 : (ppTcpHdr->DstPort == htons(80))) &&
                         find_http_method_end(packet_data,
-                                             (do_fragment_http ? http_fragment_size : 0)) &&
-                        (do_host || do_host_removespace || do_host_mixedcase))
+                                             (do_fragment_http ? http_fragment_size : 0),
+                                             &http_req_fragmented) &&
+                        (do_host || do_host_removespace ||
+                        do_host_mixedcase || do_fragment_http_persistent))
                 {
 
                     /* Find Host header */
                     if (find_header_and_get_info(packet_data, packet_dataLen,
                         http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len) &&
                         hdr_value_len > 0 && hdr_value_len <= HOST_MAXLEN &&
-                        (do_blacklist ? blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1)) {
+                        (do_blacklist ? blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1))
+                    {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
+
+                        /*
+                         * Handle new HTTP request in new
+                         * connection (when Window Size modification disabled)
+                         * or already established connection (keep-alive).
+                         * We split HTTP request into two packets: one of http_fragment_size length
+                         * and another of original_size - http_fragment_size length.
+                         *
+                         * The second packet of a splitted part is not really needed to be sent
+                         * as Windows understand that is hasn't been sent by checking
+                         * ack number of received packet and retransmitting missing part again,
+                         * but it's better to send it anyway since it eliminates one RTT.
+                         */
+                        if (do_fragment_http_persistent && !http_req_fragmented) {
+                            ppIpHdr->Length = htons(
+                                ntohs(ppIpHdr->Length) -
+                                packet_dataLen + http_fragment_size
+                            );
+                            WinDivertHelperCalcChecksums(
+                                packet, packetLen - packet_dataLen + http_fragment_size, 0
+                            );
+                            WinDivertSend(
+                                w_filter, packet,
+                                packetLen - packet_dataLen + http_fragment_size,
+                                &addr, NULL
+                            );
+                            if (do_fragment_http_persistent_nowait) {
+                                ppIpHdr->Length = htons(
+                                    ntohs(ppIpHdr->Length) -
+                                    http_fragment_size + packet_dataLen - http_fragment_size
+                                );
+                                memmove(packet_data,
+                                        packet_data + http_fragment_size,
+                                        packet_dataLen);
+                                packet_dataLen -= http_fragment_size;
+                                packetLen -= http_fragment_size;
+                                hdr_value_addr -= http_fragment_size;
+                                hdr_name_addr -= http_fragment_size;
+                                host_addr = hdr_value_addr;
+
+                                ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + http_fragment_size);
+                                should_recalc_checksum = 1;
+                            }
+                            else {
+                                continue;
+                            }
+                        }
 
                         if (do_host_mixedcase) {
                             mix_case(host_addr, host_len);
@@ -501,7 +585,8 @@ int main(int argc, char *argv[]) {
                         if (do_additional_space && do_host_removespace) {
                             /* End of "Host:" without trailing space */
                             method_addr = find_http_method_end(packet_data,
-                                                            (do_fragment_http ? http_fragment_size : 0));
+                                                            (do_fragment_http ? http_fragment_size : 0),
+                                                            NULL);
 
                             if (method_addr) {
                                 memmove(method_addr + 1, method_addr,
@@ -568,6 +653,10 @@ int main(int argc, char *argv[]) {
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND &&
                     ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
                     //printf("Changing Window Size!\n");
+                    /*
+                     * Window Size is changed even if do_fragment_http_persistent
+                     * is enabled as there could be non-HTTP data on port 80
+                     */
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
                         change_window_size(packet, http_fragment_size);
                         should_recalc_checksum = 1;

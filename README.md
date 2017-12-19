@@ -18,6 +18,8 @@ Usage: goodbyedpi.exe [OPTION...]
  -s          remove space between host header and its value
  -m          mix Host header case (test.com -> tEsT.cOm)
  -f [value]  set HTTP fragmentation to value
+ -k [value]  enable HTTP persistent (keep-alive) fragmentation and set it to value
+ -n          do not wait for first segment ACK when -k is enabled
  -e [value]  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
  -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
@@ -28,15 +30,15 @@ Usage: goodbyedpi.exe [OPTION...]
  --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from
                         supplied text file. This option can be supplied multiple times.
 
- -1          -p -r -s -f 2 -e 2 (most compatible mode, default)
- -2          -p -r -s -f 2 -e 40 (better speed yet still compatible)
- -3          -p -r -s -e 40 (even better speed)
+ -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)
+ -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)
+ -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)
  -4          -p -r -s (best speed)
 ```
 
-Try to run `goodbyedpi.exe -1 -a -m --dns-addr 77.88.8.8 --dns-port 1253` first. This is the most hardcore mode which will show if this program is suitable for your ISP and DPI vendor. If you can open blocked websites with these options, it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
+To check if your ISP's DPI could be circumvented, run `3_all_dnsredir_hardcore.cmd` first. This is the most hardcore mode which will show if this program is suitable for your ISP and DPI vendor at all. If you can open blocked websites with this mode, it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
 
-Try `-1` to see if it works too.
+Try `goodbyedpi -1` to see if it works too.
 
 Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites. Mode `-3` speed ups HTTP websites.
 
@@ -53,6 +55,7 @@ Most Passive DPI send HTTP 302 Redirect if you try to access blocked website ove
 Active DPI is more tricky to fool. Currently the software uses 4 methods to circumvent Active DPI:
 
 * TCP-level fragmentation for first data packet
+* TCP-level fragmentation for persistent (keep-alive) HTTP sessions
 * Replacing `Host` header with `hoSt`
 * Removing space between header name and value in `Host` header
 * Adding additional space between HTTP Method (GET, POST etc) and URI
