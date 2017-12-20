@@ -38,13 +38,13 @@
 
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
     if (!http_fragment_size) { \
-        http_fragment_size = fragment_size; \
-        if (http_fragment_size <= 0 || http_fragment_size > 65535) { \
+        if (fragment_size <= 0 || fragment_size > 65535) { \
             printf(fragment_size_message); \
             exit(EXIT_FAILURE); \
         } \
+        http_fragment_size = fragment_size; \
     } \
-    else if (http_fragment_size != fragment_size) { \
+    else if (http_fragment_size != (unsigned int)fragment_size) { \
         printf( \
             "WARNING: HTTP fragment size is already set to %d, not changing.\n", \
             http_fragment_size \
@@ -266,8 +266,8 @@ int main(int argc, char *argv[]) {
         do_http_allports = 0,
         do_host_mixedcase = 0, do_dns_redirect = 0,
         do_dns_verb = 0, do_blacklist = 0;
-    int http_fragment_size = 2;
-    int https_fragment_size = 2;
+    unsigned int http_fragment_size = 2;
+    unsigned int https_fragment_size = 2;
     uint32_t dns_addr = 0;
     uint16_t dns_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
