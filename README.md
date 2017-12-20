@@ -79,26 +79,8 @@ And for x86_64:
 
 # How to install as Windows Service
 
-One way is using an [srvstart](http://www.rozanski.org.uk/software) program.  
-Unpack it to `goodbyedpi` directory and create 3 files:
-
-*goodbyedpi.ini*
-```INI
-[GoodByeDPI]
-startup=goodbyedpi.exe
-shutdown_method=winmessage
-auto_restart=n
-```
-*srvinstall.bat*
-```Batchfile
-srvstart install GoodByeDPI -c %CD%\goodbyedpi.ini
-```
-*srvremove.bat*
-```Batchfile
-srvstart remove GoodByeDPI
-```
-Run these batch files as Administrator to install/remove service.  
-Open Windows Services panel to run service or make it start automaticaly.
+Use `service_install_russia_blacklist.cmd`, `service_install_russia_blacklist_dnsredir.cmd` and `service_remove.cmd` scripts.  
+Modify them according to your own needs.
 
 # Similar projects
 

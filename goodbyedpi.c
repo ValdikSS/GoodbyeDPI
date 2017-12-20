@@ -11,6 +11,7 @@
 #include <getopt.h>
 #include "windivert.h"
 #include "goodbyedpi.h"
+#include "service.h"
 #include "dnsredir.h"
 #include "blackwhitelist.h"
 
@@ -52,6 +53,7 @@
     } \
 } while (0)
 
+static int running_from_service = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
 static const char *http10_redirect_302 = "HTTP/1.0 302 ";
@@ -144,7 +146,7 @@ static int deinit(HANDLE handle) {
     return FALSE;
 }
 
-static void deinit_all() {
+void deinit_all() {
     for (int i = 0; i < filter_num; i++) {
         deinit(filters[i]);
     }
@@ -276,6 +278,15 @@ int main(int argc, char *argv[]) {
 
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     int hdr_value_len;
+
+    if (!running_from_service && service_register(argc, argv)) {
+        /* We've been called as a service. Register service
+         * and exit this thread. main() would be called from
+         * service.c next time.
+         */
+        running_from_service = 1;
+        return 0;
+    }
 
     if (filter_string == NULL) {
         filter_string = malloc(strlen(filter_string_template) + 1);
