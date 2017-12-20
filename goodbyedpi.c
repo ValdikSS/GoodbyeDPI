@@ -533,7 +533,9 @@ int main(int argc, char *argv[]) {
                          * ack number of received packet and retransmitting missing part again,
                          * but it's better to send it anyway since it eliminates one RTT.
                          */
-                        if (do_fragment_http_persistent && !http_req_fragmented) {
+                        if (do_fragment_http_persistent && !http_req_fragmented &&
+                            (packet_dataLen > http_fragment_size)
+                        ) {
                             ppIpHdr->Length = htons(
                                 ntohs(ppIpHdr->Length) -
                                 packet_dataLen + http_fragment_size
