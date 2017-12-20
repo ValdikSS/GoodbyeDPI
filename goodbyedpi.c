@@ -20,9 +20,6 @@
 
 #define MAX_FILTERS 4
 #define MAX_PACKET_SIZE 9016
-#define IPV4_HDR_LEN 20
-#define TCP_HDR_LEN 20
-#define TCP_WINDOWSIZE_OFFSET 14
 
 #define DIVERT_NO_LOCALNETS_DST "(" \
                    "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
@@ -216,9 +213,9 @@ static int find_header_and_get_info(const char *pktdata, int pktlen,
     return FALSE;
 }
 
-static void change_window_size(const char *pkt, int size) {
+static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, int size) {
     if (size >= 1 && size <= 65535) {
-        *(uint16_t*)(pkt + IPV4_HDR_LEN + TCP_WINDOWSIZE_OFFSET) = htons(size);
+        ppTcpHdr->Window = htons(size);
     }
 }
 
@@ -660,11 +657,11 @@ int main(int argc, char *argv[]) {
                      * is enabled as there could be non-HTTP data on port 80
                      */
                     if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
-                        change_window_size(packet, http_fragment_size);
+                        change_window_size(ppTcpHdr, http_fragment_size);
                         should_recalc_checksum = 1;
                     }
                     else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
-                        change_window_size(packet, https_fragment_size);
+                        change_window_size(ppTcpHdr, https_fragment_size);
                         should_recalc_checksum = 1;
                     }
                 }
