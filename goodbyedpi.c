@@ -287,7 +287,9 @@ int main(int argc, char *argv[]) {
     if (argc == 1) {
         /* enable mode -1 by default */
         do_passivedpi = do_host = do_host_removespace \
-            = do_fragment_http = do_fragment_https = 1;
+                = do_fragment_http = do_fragment_https \
+                = do_fragment_http_persistent \
+                = do_fragment_http_persistent_nowait = 1;
     }
 
     while ((opt = getopt_long(argc, argv, "1234prsaf:e:mwk:n", long_options, NULL)) != -1) {
