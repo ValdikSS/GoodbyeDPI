@@ -402,7 +402,7 @@ int main(int argc, char *argv[]) {
                 if (dns_port != 53) {
                     add_filter_str(IPPROTO_UDP, dns_port);
                 }
-                dns_port = ntohs(dns_port);
+                dns_port = htons(dns_port);
                 break;
             case 'v':
                 do_dns_verb = 1;
