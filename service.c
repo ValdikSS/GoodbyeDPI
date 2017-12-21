@@ -7,11 +7,12 @@
 
 static SERVICE_STATUS ServiceStatus;
 static SERVICE_STATUS_HANDLE hStatus;
-static int service_argc;
-static char **service_argv;
+static int service_argc = 0;
+static char **service_argv = NULL;
 
 int service_register(int argc, char *argv[])
 {
+    int i, ret;
     SERVICE_TABLE_ENTRY ServiceTable[] = {
         {SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)service_main},
         {NULL, NULL}
@@ -21,13 +22,30 @@ int service_register(int argc, char *argv[])
      * arguments, which are passed from "start" command, not
      * from the program command line.
      * We don't need this behaviour.
+     *
+     * Note that if StartServiceCtrlDispatcher() succeedes
+     * it does not return until the service is stopped,
+     * so we should copy all arguments first and then
+     * handle the failure.
      */
-    service_argc = argc;
-    service_argv = malloc(sizeof(void*) * argc);
-    for (int i = 0; i < argc; i++) {
-        service_argv[i] = strdup(argv[i]);
+    if (!service_argc && !service_argv) {
+        service_argc = argc;
+        service_argv = malloc(sizeof(void*) * argc);
+        for (i = 0; i < argc; i++) {
+            service_argv[i] = strdup(argv[i]);
+        }
     }
-    return StartServiceCtrlDispatcher(ServiceTable);
+
+    ret = StartServiceCtrlDispatcher(ServiceTable);
+
+    if (service_argc && service_argv) {
+        for (i = 0; i < service_argc; i++) {
+            free(service_argv[i]);
+        }
+        free(service_argv);
+    }
+
+    return ret;
 }
 
 void service_main(int argc __attribute__((unused)),
@@ -53,14 +71,9 @@ void service_main(int argc __attribute__((unused)),
     SetServiceStatus(hStatus, &ServiceStatus);
 
     // Calling main with saved argc & argv
-    main(service_argc, service_argv);
-
-    if (ServiceStatus.dwCurrentState != SERVICE_STOPPED) {
-        // If terminated with error
-        ServiceStatus.dwWin32ExitCode = 1;
-        ServiceStatus.dwCurrentState  = SERVICE_STOPPED;
-        SetServiceStatus (hStatus, &ServiceStatus);
-    }
+    ServiceStatus.dwWin32ExitCode = main(service_argc, service_argv);
+    ServiceStatus.dwCurrentState  = SERVICE_STOPPED;
+    SetServiceStatus(hStatus, &ServiceStatus);
     return;
 }
 
@@ -78,6 +91,6 @@ void service_controlhandler(DWORD request)
             break;
     }
     // Report current status
-    SetServiceStatus (hStatus, &ServiceStatus);
+    SetServiceStatus(hStatus, &ServiceStatus);
     return;
 }

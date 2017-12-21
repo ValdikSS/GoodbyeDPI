@@ -279,13 +279,22 @@ int main(int argc, char *argv[]) {
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     int hdr_value_len;
 
-    if (!running_from_service && service_register(argc, argv)) {
-        /* We've been called as a service. Register service
-         * and exit this thread. main() would be called from
-         * service.c next time.
-         */
+    if (!running_from_service) {
         running_from_service = 1;
-        return 0;
+        if (service_register(argc, argv)) {
+            /* We've been called as a service. Register service
+             * and exit this thread. main() would be called from
+             * service.c next time.
+             *
+             * Note that if service_register() succeedes it does
+             * not return until the service is stopped.
+             * That is why we should set running_from_service
+             * before calling service_register and unset it
+             * afterwards.
+             */
+            return 0;
+        }
+        running_from_service = 0;
     }
 
     if (filter_string == NULL) {
