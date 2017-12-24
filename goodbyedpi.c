@@ -22,19 +22,34 @@
 #define MAX_FILTERS 4
 #define MAX_PACKET_SIZE 9016
 
-#define DIVERT_NO_LOCALNETS_DST "(" \
+#define DIVERT_NO_LOCALNETSv4_DST "(" \
                    "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
                    "(ip.DstAddr < 10.0.0.0 or ip.DstAddr > 10.255.255.255) and " \
                    "(ip.DstAddr < 192.168.0.0 or ip.DstAddr > 192.168.255.255) and " \
                    "(ip.DstAddr < 172.16.0.0 or ip.DstAddr > 172.31.255.255) and " \
                    "(ip.DstAddr < 169.254.0.0 or ip.DstAddr > 169.254.255.255)" \
                    ")"
-#define DIVERT_NO_LOCALNETS_SRC "(" \
+#define DIVERT_NO_LOCALNETSv4_SRC "(" \
                    "(ip.SrcAddr < 127.0.0.1 or ip.SrcAddr > 127.255.255.255) and " \
                    "(ip.SrcAddr < 10.0.0.0 or ip.SrcAddr > 10.255.255.255) and " \
                    "(ip.SrcAddr < 192.168.0.0 or ip.SrcAddr > 192.168.255.255) and " \
                    "(ip.SrcAddr < 172.16.0.0 or ip.SrcAddr > 172.31.255.255) and " \
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
+                   ")"
+
+#define DIVERT_NO_LOCALNETSv6_DST "(" \
+                   "(ipv6.DstAddr > ::1) and " \
+                   "(ipv6.DstAddr < 2001::0 or ipv6.DstAddr > 2002::0) and " \
+                   "(ipv6.DstAddr < fc00::0 or ipv6.DstAddr > fe00::0) and " \
+                   "(ipv6.DstAddr < fe80::0 or ipv6.DstAddr > fec0::0) and " \
+                   "(ipv6.DstAddr < ff00::0 or ipv6.DstAddr > ffff::0)" \
+                   ")"
+#define DIVERT_NO_LOCALNETSv6_SRC "(" \
+                   "(ipv6.SrcAddr > ::1) and " \
+                   "(ipv6.SrcAddr < 2001::0 or ipv6.SrcAddr > 2002::0) and " \
+                   "(ipv6.SrcAddr < fc00::0 or ipv6.SrcAddr > fe00::0) and " \
+                   "(ipv6.SrcAddr < fe80::0 or ipv6.SrcAddr > fec0::0) and " \
+                   "(ipv6.SrcAddr < ff00::0 or ipv6.SrcAddr > ffff::0)" \
                    ")"
 
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
@@ -83,19 +98,24 @@ static struct option long_options[] = {
 };
 
 static char *filter_string = NULL;
-static char *filter_string_template = "(ip and tcp and "
-        "(inbound and (("
-         "((ip.Id == 0x0001 or ip.Id == 0x0000) and tcp.SrcPort == 80 and tcp.Ack) or "
-         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
-         ") and " DIVERT_NO_LOCALNETS_SRC ") or "
+static char *filter_string_template = "(tcp and "
+        "(inbound and ("
+         "("
+          "("
+           "(ip.Id >= 0x0 and ip.Id <= 0xF) and "
+           "tcp.SrcPort == 80 and tcp.Ack"
+          ") or "
+          "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
+         ")"
+         " and (" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC ")) or "
         "(outbound and "
          "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and "
-         DIVERT_NO_LOCALNETS_DST ")"
+         "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))"
         "))";
 
 static void add_filter_str(int proto, int port) {
-    const char *udp = " or (ip and udp and (udp.SrcPort == %d or udp.DstPort == %d))";
-    const char *tcp = " or (ip and tcp and (tcp.SrcPort == %d or tcp.DstPort == %d))";
+    const char *udp = " or (udp and (udp.SrcPort == %d or udp.DstPort == %d))";
+    const char *tcp = " or (tcp and (tcp.SrcPort == %d or tcp.DstPort == %d))";
 
     char *current_filter = filter_string;
     int new_filter_size = strlen(current_filter) +
@@ -245,10 +265,14 @@ static PVOID find_http_method_end(const char *pkt, int http_frag, int *is_fragme
 }
 
 int main(int argc, char *argv[]) {
-    static const char *fragment_size_message =
-                "Fragment size should be in range [0 - 65535]\n";
+    static enum packet_type_e {
+        unknown,
+        ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
+        ipv6_tcp, ipv6_tcp_data, ipv6_udp_data
+    } packet_type;
     int i, should_reinject, should_recalc_checksum = 0;
     int opt;
+    int packet_v4, packet_v6;
     HANDLE w_filter = NULL;
     WINDIVERT_ADDRESS addr;
     char packet[MAX_PACKET_SIZE];
@@ -256,6 +280,7 @@ int main(int argc, char *argv[]) {
     UINT packetLen;
     UINT packet_dataLen;
     PWINDIVERT_IPHDR ppIpHdr;
+    PWINDIVERT_IPV6HDR ppIpV6Hdr;
     PWINDIVERT_TCPHDR ppTcpHdr;
     PWINDIVERT_UDPHDR ppUdpHdr;
     conntrack_info_t dns_conn_info;
@@ -469,18 +494,18 @@ int main(int argc, char *argv[]) {
     filter_num = 0;
 
     if (do_passivedpi) {
-        /* IPv4 filter for inbound RST packets with ID = 0 or 1 */
+        /* IPv4 only filter for inbound RST packets with ID = 0 or 1 */
         filters[filter_num] = init(
             "inbound and ip and tcp and "
-            "(ip.Id == 0x0001 or ip.Id == 0x0000) and "
+            "(ip.Id >= 0x0000 and ip.Id <= 0x000F) and "
             "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and "
-            DIVERT_NO_LOCALNETS_SRC,
+            DIVERT_NO_LOCALNETSv4_SRC,
             WINDIVERT_FLAG_DROP);
         filter_num++;
     }
 
     /* 
-     * IPv4 filter for inbound HTTP redirection packets and
+     * IPv4 & IPv6 filter for inbound HTTP redirection packets and
      * active DPI circumvention
      */
     filters[filter_num] = init(filter_string, 0);
@@ -498,13 +523,53 @@ int main(int argc, char *argv[]) {
 
     while (1) {
         if (WinDivertRecv(w_filter, packet, sizeof(packet), &addr, &packetLen)) {
-            //printf("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
-            //       packetLen);
+            debug("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
+                   packetLen);
             should_reinject = 1;
             should_recalc_checksum = 0;
 
-            if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
-                NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)) {
+            ppIpHdr = (PWINDIVERT_IPHDR)NULL;
+            ppIpV6Hdr = (PWINDIVERT_IPV6HDR)NULL;
+            ppTcpHdr = (PWINDIVERT_TCPHDR)NULL;
+            ppUdpHdr = (PWINDIVERT_UDPHDR)NULL;
+            packet_v4 = packet_v6 = 0;
+            packet_type = unknown;
+
+            // Parse network packet and set it's type
+            if ((packet_v4 = WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
+                NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)))
+            {
+                packet_type = ipv4_tcp_data;
+            }
+            else if ((packet_v6 = WinDivertHelperParsePacket(packet, packetLen, NULL,
+                &ppIpV6Hdr, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen)))
+            {
+                packet_type = ipv6_tcp_data;
+            }
+            else if ((packet_v4 = WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
+                NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)))
+            {
+                packet_type = ipv4_tcp;
+            }
+            else if ((packet_v6 = WinDivertHelperParsePacket(packet, packetLen, NULL,
+                &ppIpV6Hdr, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)))
+            {
+                packet_type = ipv6_tcp;
+            }
+            else if ((packet_v4 = WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
+                NULL, NULL, NULL, NULL, &ppUdpHdr, &packet_data, &packet_dataLen)))
+            {
+                packet_type = ipv4_udp_data;
+            }
+            else if ((packet_v6 = WinDivertHelperParsePacket(packet, packetLen, NULL,
+                &ppIpV6Hdr, NULL, NULL, NULL, &ppUdpHdr, &packet_data, &packet_dataLen)))
+            {
+                packet_type = ipv6_udp_data;
+            }
+
+            debug("packet_type: %d, packet_v4: %d, packet_v6: %d\n", packet_type, packet_v4, packet_v6);
+
+            if (packet_type == ipv4_tcp_data || packet_type == ipv6_tcp_data) {
                 //printf("Got parsed packet, len=%d!\n", packet_dataLen);
                 /* Got a TCP packet WITH DATA */
 
@@ -551,12 +616,19 @@ int main(int argc, char *argv[]) {
                          * but it's better to send it anyway since it eliminates one RTT.
                          */
                         if (do_fragment_http_persistent && !http_req_fragmented &&
-                            (packet_dataLen > http_fragment_size)
-                        ) {
-                            ppIpHdr->Length = htons(
-                                ntohs(ppIpHdr->Length) -
-                                packet_dataLen + http_fragment_size
-                            );
+                            (packet_dataLen > http_fragment_size))
+                        {
+                            if (packet_v4)
+                                ppIpHdr->Length = htons(
+                                    ntohs(ppIpHdr->Length) -
+                                    packet_dataLen + http_fragment_size
+                                );
+                            else if (packet_v6)
+                                ppIpV6Hdr->Length = htons(
+                                    ntohs(ppIpV6Hdr->Length) -
+                                    packet_dataLen + http_fragment_size
+                                );
+
                             WinDivertHelperCalcChecksums(
                                 packet, packetLen - packet_dataLen + http_fragment_size, 0
                             );
@@ -565,11 +637,18 @@ int main(int argc, char *argv[]) {
                                 packetLen - packet_dataLen + http_fragment_size,
                                 &addr, NULL
                             );
+
                             if (do_fragment_http_persistent_nowait) {
-                                ppIpHdr->Length = htons(
-                                    ntohs(ppIpHdr->Length) -
-                                    http_fragment_size + packet_dataLen - http_fragment_size
-                                );
+                                if (packet_v4)
+                                    ppIpHdr->Length = htons(
+                                        ntohs(ppIpHdr->Length) -
+                                        http_fragment_size + packet_dataLen - http_fragment_size
+                                    );
+                                else if (packet_v6)
+                                    ppIpV6Hdr->Length = htons(
+                                        ntohs(ppIpV6Hdr->Length) -
+                                        http_fragment_size + packet_dataLen - http_fragment_size
+                                    );
                                 memmove(packet_data,
                                         packet_data + http_fragment_size,
                                         packet_dataLen);
@@ -666,8 +745,7 @@ int main(int argc, char *argv[]) {
             } /* Handle TCP packet with data */
 
             /* Else if we got TCP packet without data */
-            else if (WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
-                NULL, NULL, NULL, &ppTcpHdr, NULL, NULL, NULL)) {
+            else if (packet_type == ipv4_tcp || packet_type == ipv6_tcp) {
                 /* If we got INBOUND SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND &&
                     ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
@@ -688,17 +766,24 @@ int main(int argc, char *argv[]) {
             }
 
             /* Else if we got UDP packet with data */
-            else if (do_dns_redirect && WinDivertHelperParsePacket(packet, packetLen, &ppIpHdr,
-                NULL, NULL, NULL, NULL, &ppUdpHdr, &packet_data, &packet_dataLen)) {
+            else if (do_dns_redirect &&
+                (packet_type == ipv4_udp_data || packet_type == ipv6_udp_data)) {
 
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
-                    if (dns_handle_incoming(ppIpHdr->DstAddr, ppUdpHdr->DstPort,
+                    if ((packet_v4 && dns_handle_incoming(ppIpHdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen,
                                         &dns_conn_info))
+                        /*||
+                        (packet_v6 && dns_handle_incoming(ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
+                                        packet_data, packet_dataLen,
+                                        &dns_conn_info))*/)
                     {
                         /* Changing source IP and port to the values
                          * from DNS conntrack */
-                        ppIpHdr->SrcAddr = dns_conn_info.dstip;
+                        if (packet_v4)
+                            ppIpHdr->SrcAddr = dns_conn_info.dstip;
+                        /*else if (packet_v6)
+                            ppIpV6Hdr->SrcAddr = dns_conn_info.dstip;*/
                         ppUdpHdr->DstPort = dns_conn_info.srcport;
                         ppUdpHdr->SrcPort = dns_conn_info.dstport;
                         should_recalc_checksum = 1;
@@ -715,13 +800,20 @@ int main(int argc, char *argv[]) {
                 }
 
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND) {
-                    if (dns_handle_outgoing(ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
+                    if ((packet_v4 && dns_handle_outgoing(ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
                                         ppIpHdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen))
+                        /*||
+                        (packet_v6 && dns_handle_outgoing(ppIpV6Hdr->SrcAddr, ppUdpHdr->SrcPort,
+                                        ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
+                                        packet_data, packet_dataLen))*/)
                     {
                         /* Changing destination IP and port to the values
                          * from configuration */
-                        ppIpHdr->DstAddr = dns_addr;
+                        if (packet_v4)
+                            ppIpHdr->DstAddr = dns_addr;
+                        /*else if (packet_v6)
+                            ppIpV6Hdr->DstAddr = dns_addr;*/
                         ppUdpHdr->DstPort = dns_port;
                         should_recalc_checksum = 1;
                     }
