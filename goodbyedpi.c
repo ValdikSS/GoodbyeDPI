@@ -40,7 +40,7 @@
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
     if (!http_fragment_size) { \
         if (fragment_size <= 0 || fragment_size > 65535) { \
-            puts(fragment_size_message); \
+            puts("Fragment size should be in range [0 - 65535]\n"); \
             exit(EXIT_FAILURE); \
         } \
         http_fragment_size = fragment_size; \
@@ -133,7 +133,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                   FORMAT_MESSAGE_IGNORE_INSERTS,
                   NULL, GetLastError(), MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                   (LPTSTR)&errormessage, 0, NULL);
-    printf("%s", errormessage);
+    puts(errormessage);
     free(errormessage);
     return NULL;
 }
@@ -297,10 +297,8 @@ int main(int argc, char *argv[]) {
         running_from_service = 0;
     }
 
-    if (filter_string == NULL) {
-        filter_string = malloc(strlen(filter_string_template) + 1);
-        strcpy(filter_string, filter_string_template);
-    }
+    if (filter_string == NULL)
+        filter_string = strdup(filter_string_template);
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
@@ -366,7 +364,7 @@ int main(int argc, char *argv[]) {
                 do_fragment_https = 1;
                 https_fragment_size = atoi(optarg);
                 if (https_fragment_size <= 0 || https_fragment_size > 65535) {
-                    puts(fragment_size_message);
+                    puts("Fragment size should be in range [0 - 65535]\n");
                     exit(EXIT_FAILURE);
                 }
                 break;
