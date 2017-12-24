@@ -39,14 +39,14 @@
 
 #define DIVERT_NO_LOCALNETSv6_DST "(" \
                    "(ipv6.DstAddr > ::1) and " \
-                   "(ipv6.DstAddr < 2001::0 or ipv6.DstAddr > 2002::0) and " \
+                   "(ipv6.DstAddr < 2001::0 or ipv6.DstAddr > 2001:1::0) and " \
                    "(ipv6.DstAddr < fc00::0 or ipv6.DstAddr > fe00::0) and " \
                    "(ipv6.DstAddr < fe80::0 or ipv6.DstAddr > fec0::0) and " \
                    "(ipv6.DstAddr < ff00::0 or ipv6.DstAddr > ffff::0)" \
                    ")"
 #define DIVERT_NO_LOCALNETSv6_SRC "(" \
                    "(ipv6.SrcAddr > ::1) and " \
-                   "(ipv6.SrcAddr < 2001::0 or ipv6.SrcAddr > 2002::0) and " \
+                   "(ipv6.SrcAddr < 2001::0 or ipv6.SrcAddr > 2001:1::0) and " \
                    "(ipv6.SrcAddr < fc00::0 or ipv6.SrcAddr > fe00::0) and " \
                    "(ipv6.SrcAddr < fe80::0 or ipv6.SrcAddr > fec0::0) and " \
                    "(ipv6.SrcAddr < ff00::0 or ipv6.SrcAddr > ffff::0)" \
