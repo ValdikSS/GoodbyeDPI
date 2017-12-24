@@ -245,8 +245,6 @@ static PVOID find_http_method_end(const char *pkt, int http_frag, int *is_fragme
 }
 
 int main(int argc, char *argv[]) {
-    static const char *fragment_size_message =
-                "Fragment size should be in range [0 - 65535]\n";
     int i, should_reinject, should_recalc_checksum = 0;
     int opt;
     HANDLE w_filter = NULL;
