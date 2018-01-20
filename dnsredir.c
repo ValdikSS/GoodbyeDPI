@@ -195,6 +195,6 @@ int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
             return TRUE;
         }
     }
-    debug("____dns_handle_incoming FALSE: srcport = %hu, dstport = %hu\n", ntohs(srcport), ntohs(dstport));
+    debug("____dns_handle_incoming FALSE: srcport = %hu\n", ntohs(srcport));
     return FALSE;
 }
