@@ -15,9 +15,7 @@
 #include "dnsredir.h"
 #include "blackwhitelist.h"
 
-#define die() do { printf("Something went wrong!\n" \
-    "Make sure you're running this program with administrator privileges\n"); \
-    sleep(10); exit(EXIT_FAILURE); } while (0)
+#define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
 #define MAX_FILTERS 4
 #define MAX_PACKET_SIZE 9016
@@ -126,15 +124,27 @@ static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int
 
 static HANDLE init(char *filter, UINT64 flags) {
     LPTSTR errormessage = NULL;
+    DWORD errorcode = 0;
     filter = WinDivertOpen(filter, WINDIVERT_LAYER_NETWORK, 0, flags);
     if (filter != INVALID_HANDLE_VALUE)
         return filter;
+    errorcode = GetLastError();
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
                   FORMAT_MESSAGE_IGNORE_INSERTS,
-                  NULL, GetLastError(), MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+                  NULL, errorcode, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                   (LPTSTR)&errormessage, 0, NULL);
-    puts(errormessage);
-    free(errormessage);
+    printf("Error opening filter: %s", errormessage);
+    LocalFree(errormessage);
+    if (errorcode == 577)
+        printf("Windows Server 2016 systems must have secure boot disabled to be "
+               "able to load WinDivert driver.\n"
+               "Windows 7 systems must be up-to-date or at least have KB3033929 installed.\n"
+               "https://www.microsoft.com/en-us/download/details.aspx?id=46078\n\n"
+               "WARNING! If you see this error on Windows 7, it means your system is horribly "
+               "outdated and SHOULD NOT BE USED TO ACCESS THE INTERNET!\n"
+               "Most probably, you don't have security patches installed and anyone in you LAN or "
+               "public Wi-Fi network can get full access to your computer (MS17-010 and others).\n"
+               "You should install updates IMMEDIATELY.\n");
     return NULL;
 }
 
@@ -474,6 +484,8 @@ int main(int argc, char *argv[]) {
             "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and "
             DIVERT_NO_LOCALNETS_SRC,
             WINDIVERT_FLAG_DROP);
+        if (filters[filter_num] == NULL)
+            die();
         filter_num++;
     }
 
