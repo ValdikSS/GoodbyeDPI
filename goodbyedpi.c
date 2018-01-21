@@ -349,7 +349,10 @@ int main(int argc, char *argv[]) {
     if (filter_passive_string == NULL)
         filter_passive_string = strdup(FILTER_PASSIVE_STRING_TEMPLATE);
 
-    printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
+    printf(
+        "GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n"
+        "https://github.com/ValdikSS/GoodbyeDPI\n\n"
+    );
 
     if (argc == 1) {
         /* enable mode -1 by default */
