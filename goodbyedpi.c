@@ -37,7 +37,7 @@
 
 #define FILTER_STRING_TEMPLATE "(ip and tcp and " \
         "(inbound and ((" \
-        "((ip.Id <= 0xF or ip.Id >= 0x0) and tcp.SrcPort == 80 and tcp.Ack) or " \
+        "((ip.Id <= 0xF and ip.Id >= 0x0) and tcp.SrcPort == 80 and tcp.Ack) or " \
         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
         ") and " DIVERT_NO_LOCALNETS_SRC ") or " \
         "(outbound and " \
@@ -45,7 +45,7 @@
         DIVERT_NO_LOCALNETS_DST ")" \
         "))"
 #define FILTER_STRING_PASSIVE "inbound and ip and tcp and " \
-        "(ip.Id <= 0xF or ip.Id >= 0x0) and " \
+        "(ip.Id <= 0xF and ip.Id >= 0x0) and " \
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
         DIVERT_NO_LOCALNETS_SRC
 
