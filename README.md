@@ -54,7 +54,7 @@ Most Passive DPI send HTTP 302 Redirect if you try to access blocked website ove
 
 ### Active DPI
 
-Active DPI is more tricky to fool. Currently the software uses 4 methods to circumvent Active DPI:
+Active DPI is more tricky to fool. Currently the software uses 6 methods to circumvent Active DPI:
 
 * TCP-level fragmentation for first data packet
 * TCP-level fragmentation for persistent (keep-alive) HTTP sessions
