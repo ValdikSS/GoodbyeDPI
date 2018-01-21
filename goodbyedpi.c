@@ -11,6 +11,7 @@
 #include <getopt.h>
 #include "windivert.h"
 #include "goodbyedpi.h"
+#include "repl_str.h"
 #include "service.h"
 #include "dnsredir.h"
 #include "blackwhitelist.h"
@@ -35,17 +36,20 @@
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
                    ")"
 
+/* #IPID# is a template to find&replace */
+#define IPID_TEMPLATE "#IPID#"
 #define FILTER_STRING_TEMPLATE "(ip and tcp and " \
         "(inbound and ((" \
-        "((ip.Id <= 0xF and ip.Id >= 0x0) and tcp.SrcPort == 80 and tcp.Ack) or " \
+        "(((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE \
+        ") and tcp.SrcPort == 80 and tcp.Ack) or " \
         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
         ") and " DIVERT_NO_LOCALNETS_SRC ") or " \
         "(outbound and " \
         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
         DIVERT_NO_LOCALNETS_DST ")" \
         "))"
-#define FILTER_STRING_PASSIVE "inbound and ip and tcp and " \
-        "(ip.Id <= 0xF and ip.Id >= 0x0) and " \
+#define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
+        "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
         DIVERT_NO_LOCALNETS_SRC
 
@@ -91,10 +95,12 @@ static struct option long_options[] = {
     {"dns-port",  required_argument, 0,  'g' },
     {"dns-verb",  no_argument,       0,  'v' },
     {"blacklist", required_argument, 0,  'b' },
+    {"ip-id",     required_argument, 0,  'i' },
     {0,           0,                 0,   0  }
 };
 
 static char *filter_string = NULL;
+static char *filter_passive_string = NULL;
 
 static void add_filter_str(int proto, int port) {
     const char *udp = " or (ip and udp and (udp.SrcPort == %d or udp.DstPort == %d))";
@@ -113,6 +119,34 @@ static void add_filter_str(int proto, int port) {
 
     filter_string = new_filter;
     free(current_filter);
+}
+
+static void add_ip_id_str(int id) {
+    char *newstr;
+    const char *ipid = " or ip.Id == %d";
+    char *addfilter = malloc(strlen(ipid) + 16);
+
+    sprintf(addfilter, ipid, id);
+
+    newstr = repl_str(filter_string, IPID_TEMPLATE, addfilter);
+    free(filter_string);
+    filter_string = newstr;
+
+    newstr = repl_str(filter_passive_string, IPID_TEMPLATE, addfilter);
+    free(filter_passive_string);
+    filter_passive_string = newstr;
+}
+
+static void finalize_filter_strings() {
+    char *newstr;
+
+    newstr = repl_str(filter_string, IPID_TEMPLATE, "");
+    free(filter_string);
+    filter_string = newstr;
+
+    newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
+    free(filter_passive_string);
+    filter_passive_string = newstr;
 }
 
 static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
@@ -312,6 +346,8 @@ int main(int argc, char *argv[]) {
 
     if (filter_string == NULL)
         filter_string = strdup(FILTER_STRING_TEMPLATE);
+    if (filter_passive_string == NULL)
+        filter_passive_string = strdup(FILTER_PASSIVE_STRING_TEMPLATE);
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
@@ -395,6 +431,16 @@ int main(int argc, char *argv[]) {
                     add_filter_str(IPPROTO_TCP, i);
                 i = 0;
                 break;
+            case 'i':
+                /* i is used as a temporary variable here */
+                i = atoi(optarg);
+                if (i < 0 || i > 65535) {
+                    printf("IP ID parameter error!\n");
+                    exit(EXIT_FAILURE);
+                }
+                add_ip_id_str(i);
+                i = 0;
+                break;
             case 'd':
                 if (!do_dns_redirect) {
                     do_dns_redirect = 1;
@@ -447,6 +493,8 @@ int main(int argc, char *argv[]) {
                 " -e [value]  set HTTPS fragmentation to value\n"
                 " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
                 " --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
+                " --ip-id     [value]    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).\n"
+                "                        This option can be supplied multiple times.\n"
                 " --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)\n"
                 " --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)\n"
                 " --dns-verb             print verbose DNS redirection messages\n"
@@ -479,12 +527,13 @@ int main(int argc, char *argv[]) {
     }
 
     printf("\nOpening filter\n");
+    finalize_filter_strings();
     filter_num = 0;
 
     if (do_passivedpi) {
         /* IPv4 filter for inbound RST packets with ID [0x0; 0xF] */
         filters[filter_num] = init(
-            FILTER_STRING_PASSIVE,
+            filter_passive_string,
             WINDIVERT_FLAG_DROP);
         if (filters[filter_num] == NULL)
             die();

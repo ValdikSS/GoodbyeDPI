@@ -24,6 +24,8 @@ Usage: goodbyedpi.exe [OPTION...]
  -a          additional space between Method and Request-URI (enables -s, may break sites)
  -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
  --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
+ --ip-id     [value]    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).
+                        This option can be supplied multiple times.
  --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)
  --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)
  --dns-verb             print verbose DNS redirection messages
