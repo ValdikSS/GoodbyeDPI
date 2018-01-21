@@ -35,6 +35,20 @@
                    "(ip.SrcAddr < 169.254.0.0 or ip.SrcAddr > 169.254.255.255)" \
                    ")"
 
+#define FILTER_STRING_TEMPLATE "(ip and tcp and " \
+        "(inbound and ((" \
+        "((ip.Id <= 0xF or ip.Id >= 0x0) and tcp.SrcPort == 80 and tcp.Ack) or " \
+        "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
+        ") and " DIVERT_NO_LOCALNETS_SRC ") or " \
+        "(outbound and " \
+        "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
+        DIVERT_NO_LOCALNETS_DST ")" \
+        "))"
+#define FILTER_STRING_PASSIVE "inbound and ip and tcp and " \
+        "(ip.Id <= 0xF or ip.Id >= 0x0) and " \
+        "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
+        DIVERT_NO_LOCALNETS_SRC
+
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
     if (!http_fragment_size) { \
         if (fragment_size <= 0 || fragment_size > 65535) { \
@@ -81,15 +95,6 @@ static struct option long_options[] = {
 };
 
 static char *filter_string = NULL;
-static char *filter_string_template = "(ip and tcp and "
-        "(inbound and (("
-         "((ip.Id <= 0xF or ip.Id >= 0x0) and tcp.SrcPort == 80 and tcp.Ack) or "
-         "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)"
-         ") and " DIVERT_NO_LOCALNETS_SRC ") or "
-        "(outbound and "
-         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and "
-         DIVERT_NO_LOCALNETS_DST ")"
-        "))";
 
 static void add_filter_str(int proto, int port) {
     const char *udp = " or (ip and udp and (udp.SrcPort == %d or udp.DstPort == %d))";
@@ -306,7 +311,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (filter_string == NULL)
-        filter_string = strdup(filter_string_template);
+        filter_string = strdup(FILTER_STRING_TEMPLATE);
 
     printf("GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n");
 
@@ -477,12 +482,9 @@ int main(int argc, char *argv[]) {
     filter_num = 0;
 
     if (do_passivedpi) {
-        /* IPv4 filter for inbound RST packets with ID = 0 or 1 */
+        /* IPv4 filter for inbound RST packets with ID [0x0; 0xF] */
         filters[filter_num] = init(
-            "inbound and ip and tcp and "
-            "(ip.Id <= 0xF or ip.Id >= 0x0) and "
-            "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and "
-            DIVERT_NO_LOCALNETS_SRC,
+            FILTER_STRING_PASSIVE,
             WINDIVERT_FLAG_DROP);
         if (filters[filter_num] == NULL)
             die();
