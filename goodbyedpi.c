@@ -326,6 +326,10 @@ int main(int argc, char *argv[]) {
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     int hdr_value_len;
 
+    // Make sure to search DLLs only in safe path, not in current working dir.
+    SetDllDirectory("");
+    SetSearchPathMode(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT);
+
     if (!running_from_service) {
         running_from_service = 1;
         if (service_register(argc, argv)) {
