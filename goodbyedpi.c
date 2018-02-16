@@ -89,12 +89,12 @@ static const char *http_methods[] = {
 };
 
 static struct option long_options[] = {
-    {"port",      required_argument, 0,  'z' },
-    {"dns-addr",  required_argument, 0,  'd' },
-    {"dns-port",  required_argument, 0,  'g' },
-    {"dns-verb",  no_argument,       0,  'v' },
-    {"blacklist", required_argument, 0,  'b' },
-    {0,           0,                 0,   0  }
+    {"port",        required_argument, 0,  'z' },
+    {"dns-addr",    required_argument, 0,  'd' },
+    {"dns-port",    required_argument, 0,  'g' },
+    {"dns-verb",    no_argument,       0,  'v' },
+    {"blacklist",   required_argument, 0,  'b' },
+    {0,             0,                 0,   0  }
 };
 
 static char *filter_string = NULL;
@@ -295,8 +295,10 @@ int main(int argc, char *argv[]) {
         do_dns_verb = 0, do_blacklist = 0;
     unsigned int http_fragment_size = 2;
     unsigned int https_fragment_size = 2;
-    uint32_t dns_addr = 0;
-    uint16_t dns_port = htons(53);
+    uint32_t dnsv4_addr = 0;
+    uint32_t dnsv6_addr[4] = {0};
+    uint16_t dnsv4_port = htons(53);
+    uint16_t dnsv6_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
     int host_len, useragent_len;
     int http_req_fragmented;
@@ -410,8 +412,8 @@ int main(int argc, char *argv[]) {
             case 'd':
                 if (!do_dns_redirect) {
                     do_dns_redirect = 1;
-                    dns_addr = inet_addr(optarg);
-                    if (!dns_addr) {
+                    dnsv4_addr = inet_addr(optarg);
+                    if (!dnsv4_addr) {
                         printf("DNS address parameter error!\n");
                         exit(EXIT_FAILURE);
                     }
@@ -426,15 +428,15 @@ int main(int argc, char *argv[]) {
                         "--dns-port\n");
                     exit(EXIT_FAILURE);
                 }
-                dns_port = atoi(optarg);
+                dnsv4_port = atoi(optarg);
                 if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
                     printf("DNS port parameter error!\n");
                     exit(EXIT_FAILURE);
                 }
-                if (dns_port != 53) {
-                    add_filter_str(IPPROTO_UDP, dns_port);
+                if (dnsv4_port != 53) {
+                    add_filter_str(IPPROTO_UDP, dnsv4_port);
                 }
-                dns_port = htons(dns_port);
+                dnsv4_port = htons(dnsv4_port);
                 break;
             case 'v':
                 do_dns_verb = 1;
@@ -447,7 +449,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             default:
-                printf("Usage: goodbyedpi.exe [OPTION...]\n"
+                puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
                 " -r          replace Host with hoSt\n"
                 " -s          remove space between host header and its value\n"
@@ -458,17 +460,19 @@ int main(int argc, char *argv[]) {
                 " -n          do not wait for first segment ACK when -k is enabled\n"
                 " -e [value]  set HTTPS fragmentation to value\n"
                 " -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)\n"
-                " --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
-                " --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)\n"
-                " --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)\n"
-                " --dns-verb             print verbose DNS redirection messages\n"
-                " --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
-                "                        supplied text file. This option can be supplied multiple times.\n"
+                " --port        [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)\n"
+                " --dns-addr    [value]    redirect UDPv4 DNS requests to the supplied IPv4 address (experimental)\n"
+                " --dns-port    [value]    redirect UDPv4 DNS requests to the supplied port (53 by default)\n"
+                " --dnsv6-addr  [value]    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)\n"
+                " --dnsv6-port  [value]    redirect UDPv6 DNS requests to the supplied port (53 by default)\n"
+                " --dns-verb               print verbose DNS redirection messages\n"
+                " --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
+                "                          supplied text file. This option can be supplied multiple times.\n"
                 "\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
                 " -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)\n"
-                " -4          -p -r -s (best speed)\n");
+                " -4          -p -r -s (best speed)");
                 exit(EXIT_FAILURE);
         }
     }
@@ -770,20 +774,20 @@ int main(int argc, char *argv[]) {
                 (packet_type == ipv4_udp_data || packet_type == ipv6_udp_data)) {
 
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
-                    if ((packet_v4 && dns_handle_incoming(ppIpHdr->DstAddr, ppUdpHdr->DstPort,
+                    if ((packet_v4 && dns_handle_incoming(&ppIpHdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen,
-                                        &dns_conn_info))
+                                        &dns_conn_info, 0))
                         /*||
                         (packet_v6 && dns_handle_incoming(ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen,
-                                        &dns_conn_info))*/)
+                                        &dns_conn_info, 1))*/)
                     {
                         /* Changing source IP and port to the values
                          * from DNS conntrack */
                         if (packet_v4)
-                            ppIpHdr->SrcAddr = dns_conn_info.dstip;
-                        /*else if (packet_v6)
-                            ppIpV6Hdr->SrcAddr = dns_conn_info.dstip;*/
+                            ppIpHdr->SrcAddr = dns_conn_info.dstip[0];
+                        else if (packet_v6)
+                            ipv6_copy_addr(ppIpV6Hdr->SrcAddr, dns_conn_info.dstip);
                         ppUdpHdr->DstPort = dns_conn_info.srcport;
                         ppUdpHdr->SrcPort = dns_conn_info.dstport;
                         should_recalc_checksum = 1;
@@ -800,21 +804,24 @@ int main(int argc, char *argv[]) {
                 }
 
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND) {
-                    if ((packet_v4 && dns_handle_outgoing(ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
-                                        ppIpHdr->DstAddr, ppUdpHdr->DstPort,
-                                        packet_data, packet_dataLen))
+                    if ((packet_v4 && dns_handle_outgoing(&ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
+                                        &ppIpHdr->DstAddr, ppUdpHdr->DstPort,
+                                        packet_data, packet_dataLen, 0))
                         /*||
                         (packet_v6 && dns_handle_outgoing(ppIpV6Hdr->SrcAddr, ppUdpHdr->SrcPort,
                                         ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
-                                        packet_data, packet_dataLen))*/)
+                                        packet_data, packet_dataLen, 1))*/)
                     {
                         /* Changing destination IP and port to the values
                          * from configuration */
-                        if (packet_v4)
-                            ppIpHdr->DstAddr = dns_addr;
-                        /*else if (packet_v6)
-                            ppIpV6Hdr->DstAddr = dns_addr;*/
-                        ppUdpHdr->DstPort = dns_port;
+                        if (packet_v4) {
+                            ppIpHdr->DstAddr = dnsv4_addr;
+                            ppUdpHdr->DstPort = dnsv4_port;
+                        }
+                        else if (packet_v6) {
+                            ipv6_copy_addr(ppIpV6Hdr->DstAddr, dnsv6_addr);
+                            ppUdpHdr->DstPort = dnsv6_port;
+                        }
                         should_recalc_checksum = 1;
                     }
                     else {

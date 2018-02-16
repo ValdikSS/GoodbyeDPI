@@ -17,8 +17,8 @@
 #include "dnsredir.h"
 #include "uthash.h"
 
-// IPv6 incompatible!
-#define UDP_CONNRECORD_KEY_LEN 6
+/* key ('4' for IPv4 or '6' for IPv6 + srcip[16] + srcport[2]) */
+#define UDP_CONNRECORD_KEY_LEN 19
 
 #define DNS_CLEANUP_INTERVAL_SEC 30
 
@@ -32,10 +32,10 @@
 #define uthash_strlen(s) UDP_CONNRECORD_KEY_LEN
 
 typedef struct udp_connrecord {
-    /* key (srcip[4] + srcport[2]) */
+    /* key ('4' for IPv4 or '6' for IPv6 + srcip[16] + srcport[2]) */
     char key[UDP_CONNRECORD_KEY_LEN];
     time_t time;         /* time when this record was added */
-    uint32_t dstip;
+    uint32_t dstip[4];
     uint16_t dstport;
     UT_hash_handle hh;   /* makes this structure hashable */
 } udp_connrecord_t;
@@ -59,26 +59,60 @@ void flush_dns_cache() {
     FreeLibrary(dnsapi);
 }
 
-inline static void construct_key(const uint32_t srcip, const uint16_t srcport, char *key) {
+inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_t srcip[4],
+                          const uint16_t srcport)
+{
+    if (is_ipv6) {
+        *(uint8_t*)(key) = '6';
+        ipv6_copy_addr((uint32_t*)(key + sizeof(uint8_t)), srcip);
+    }
+    else {
+        *(uint8_t*)(key) = '4';
+        ipv4_copy_addr((uint32_t*)(key + sizeof(uint8_t)), srcip);
+    }
+
+    *(uint16_t*)(key + sizeof(uint8_t) + sizeof(uint32_t) * 4) = srcport;
+}
+
+inline static void fill_data_from_key(uint8_t *is_ipv6, uint32_t srcip[4], uint16_t *srcport,
+                                      const char *key)
+{
+    if (key[0] == '6') {
+        *is_ipv6 = 1;
+        ipv6_copy_addr(srcip, (uint32_t*)(key + sizeof(uint8_t)));
+    }
+    else {
+        *is_ipv6 = 0;
+        ipv4_copy_addr(srcip, (uint32_t*)(key + sizeof(uint8_t)));
+    }
+    *srcport = *(uint16_t*)(key + sizeof(uint8_t) + sizeof(uint32_t) * 4);
+}
+
+inline static void construct_key(const uint32_t srcip[4], const uint16_t srcport,
+                                 char *key, int is_ipv6)
+{
     debug("Construct key enter\n");
     if (key) {
         debug("Constructing key\n");
-
-        *(uint32_t*)(key) = srcip;
-        *(uint16_t*)(key + sizeof(srcip)) = srcport;
+        fill_key_data(key, is_ipv6, srcip, srcport);
     }
     debug("Construct key end\n");
 }
 
-inline static void deconstruct_key(const char *key, udp_connrecord_t *connrecord,
-                                   conntrack_info_t *conn_info) {
+inline static void deconstruct_key(const char *key, const udp_connrecord_t *connrecord,
+                                   conntrack_info_t *conn_info)
+{
     debug("Deconstruct key enter\n");
     if (key && conn_info) {
         debug("Deconstructing key\n");
+        fill_data_from_key(&conn_info->is_ipv6, conn_info->srcip,
+                           &conn_info->srcport, key);
 
-        conn_info->srcip = *(uint32_t*)(key);
-        conn_info->srcport = *(uint16_t*)(key + sizeof(conn_info->srcip));
-        conn_info->dstip = connrecord->dstip;
+        if (conn_info->is_ipv6)
+            ipv6_copy_addr(conn_info->dstip, connrecord->dstip);
+        else
+            ipv4_copy_addr(conn_info->dstip, connrecord->dstip);
+
         conn_info->dstport = connrecord->dstport;
     }
     debug("Deconstruct key end\n");
@@ -99,17 +133,26 @@ static int check_get_udp_conntrack_key(const char *key, udp_connrecord_t **connr
     return FALSE;
 }
 
-static int add_udp_conntrack(const uint32_t srcip, const uint16_t srcport,
-                             const uint32_t dstip, const uint16_t dstport) {
+static int add_udp_conntrack(const uint32_t srcip[4], const uint16_t srcport,
+                             const uint32_t dstip[4], const uint16_t dstport,
+                             const int is_ipv6
+                            )
+{
     if (!(srcip && srcport && dstip && dstport))
         return FALSE;
 
     udp_connrecord_t *tmp_connrecord = malloc(sizeof(udp_connrecord_t));
-    construct_key(srcip, srcport, tmp_connrecord->key);
+    construct_key(srcip, srcport, tmp_connrecord->key, is_ipv6);
 
     if (!check_get_udp_conntrack_key(tmp_connrecord->key, NULL)) {
         tmp_connrecord->time = time(NULL);
-        tmp_connrecord->dstip = dstip;
+
+        if (is_ipv6) {
+            ipv6_copy_addr(tmp_connrecord->dstip, dstip);
+        }
+        else {
+            ipv4_copy_addr(tmp_connrecord->dstip, dstip);
+        }
         tmp_connrecord->dstport = dstport;
         HASH_ADD_STR(conntrack, key, tmp_connrecord);
         debug("Added UDP conntrack\n");
@@ -120,7 +163,7 @@ static int add_udp_conntrack(const uint32_t srcip, const uint16_t srcport,
     return FALSE;
 }
 
-void dns_cleanup() {
+static void dns_cleanup() {
     udp_connrecord_t *tmp_connrecord, *tmp_connrecord2 = NULL;
 
     if (last_cleanup == 0) {
@@ -154,10 +197,11 @@ int dns_is_dns_packet(const char *packet_data, const UINT packet_dataLen, const 
     return FALSE;
 }
 
-int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
-                        const uint32_t dstip, const uint16_t dstport,
-                        const char *packet_data, const UINT packet_dataLen) {
-
+int dns_handle_outgoing(const uint32_t srcip[4], const uint16_t srcport,
+                        const uint32_t dstip[4], const uint16_t dstport,
+                        const char *packet_data, const UINT packet_dataLen,
+                        const uint8_t is_ipv6)
+{
     if (packet_dataLen < 16)
         return FALSE;
 
@@ -166,16 +210,16 @@ int dns_handle_outgoing(const uint32_t srcip, const uint16_t srcport,
     if (dns_is_dns_packet(packet_data, packet_dataLen, 1)) {
         /* Looks like DNS request */
         debug("trying to add srcport = %hu, dstport = %hu\n", ntohs(srcport), ntohs(dstport));
-        return add_udp_conntrack(srcip, srcport, dstip, dstport);
+        return add_udp_conntrack(srcip, srcport, dstip, dstport, is_ipv6);
     }
     debug("____dns_handle_outgoing FALSE: srcport = %hu, dstport = %hu\n", ntohs(srcport), ntohs(dstport));
     return FALSE;
 }
 
-int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
+int dns_handle_incoming(const uint32_t srcip[4], const uint16_t srcport,
                         const char *packet_data, const UINT packet_dataLen,
-                        conntrack_info_t *conn_info) {
-
+                        conntrack_info_t *conn_info, const uint8_t is_ipv6)
+{
     char key[UDP_CONNRECORD_KEY_LEN];
     udp_connrecord_t *tmp_connrecord = NULL;
 
@@ -186,7 +230,7 @@ int dns_handle_incoming(const uint32_t srcip, const uint16_t srcport,
 
     if (dns_is_dns_packet(packet_data, packet_dataLen, 0)) {
         /* Looks like DNS response */
-        construct_key(srcip, srcport, key);
+        construct_key(srcip, srcport, key, is_ipv6);
         if (check_get_udp_conntrack_key(key, &tmp_connrecord) && tmp_connrecord) {
             /* Connection exists in conntrack, moving on */
             deconstruct_key(key, tmp_connrecord, conn_info);
