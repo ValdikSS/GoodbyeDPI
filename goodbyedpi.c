@@ -9,11 +9,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <in6addr.h>
+#include <ws2tcpip.h>
 #include "windivert.h"
 #include "goodbyedpi.h"
 #include "service.h"
 #include "dnsredir.h"
 #include "blackwhitelist.h"
+
+WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
 
 #define die() do { printf("Something went wrong!\n" \
     "Make sure you're running this program with administrator privileges\n"); \
@@ -92,6 +96,8 @@ static struct option long_options[] = {
     {"port",        required_argument, 0,  'z' },
     {"dns-addr",    required_argument, 0,  'd' },
     {"dns-port",    required_argument, 0,  'g' },
+    {"dnsv6-addr",  required_argument, 0,  '!' },
+    {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
     {0,             0,                 0,   0  }
@@ -291,12 +297,14 @@ int main(int argc, char *argv[]) {
         do_fragment_https = 0, do_host = 0,
         do_host_removespace = 0, do_additional_space = 0,
         do_http_allports = 0,
-        do_host_mixedcase = 0, do_dns_redirect = 0,
+        do_host_mixedcase = 0,
+        do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_blacklist = 0;
     unsigned int http_fragment_size = 2;
     unsigned int https_fragment_size = 2;
     uint32_t dnsv4_addr = 0;
-    uint32_t dnsv6_addr[4] = {0};
+    struct in6_addr dnsv6_addr = {0};
+    struct in6_addr dns_temp_addr = {0};
     uint16_t dnsv4_port = htons(53);
     uint16_t dnsv6_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
@@ -410,33 +418,70 @@ int main(int argc, char *argv[]) {
                 i = 0;
                 break;
             case 'd':
-                if (!do_dns_redirect) {
-                    do_dns_redirect = 1;
-                    dnsv4_addr = inet_addr(optarg);
-                    if (!dnsv4_addr) {
-                        printf("DNS address parameter error!\n");
+                if ((inet_pton(AF_INET, optarg, dns_temp_addr.s6_addr) == 1) &&
+                    !do_dnsv4_redirect)
+                {
+                    do_dnsv4_redirect = 1;
+                    if (inet_pton(AF_INET, optarg, &dnsv4_addr) != 1) {
+                        puts("DNS address parameter error!");
                         exit(EXIT_FAILURE);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
                     flush_dns_cache();
+                    break;
                 }
+                puts("DNS address parameter error!");
+                exit(EXIT_FAILURE);
+                break;
+            case '!':
+                if ((inet_pton(AF_INET6, optarg, dns_temp_addr.s6_addr) == 1) &&
+                    !do_dnsv6_redirect)
+                {
+                    do_dnsv6_redirect = 1;
+                    if (inet_pton(AF_INET6, optarg, dnsv6_addr.s6_addr) != 1) {
+                        puts("DNS address parameter error!");
+                        exit(EXIT_FAILURE);
+                    }
+                    add_filter_str(IPPROTO_UDP, 53);
+                    flush_dns_cache();
+                    break;
+                }
+                puts("DNS address parameter error!");
+                exit(EXIT_FAILURE);
                 break;
             case 'g':
-                if (!do_dns_redirect) {
-                    printf("--dns-port should be used with --dns-addr!\n"
+                if (!do_dnsv4_redirect) {
+                    puts("--dns-port should be used with --dns-addr!\n"
                         "Make sure you use --dns-addr and pass it before "
-                        "--dns-port\n");
+                        "--dns-port");
                     exit(EXIT_FAILURE);
                 }
                 dnsv4_port = atoi(optarg);
                 if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
-                    printf("DNS port parameter error!\n");
+                    puts("DNS port parameter error!");
                     exit(EXIT_FAILURE);
                 }
                 if (dnsv4_port != 53) {
                     add_filter_str(IPPROTO_UDP, dnsv4_port);
                 }
                 dnsv4_port = htons(dnsv4_port);
+                break;
+            case '@':
+                if (!do_dnsv6_redirect) {
+                    puts("--dnsv6-port should be used with --dnsv6-addr!\n"
+                        "Make sure you use --dnsv6-addr and pass it before "
+                        "--dnsv6-port");
+                    exit(EXIT_FAILURE);
+                }
+                dnsv6_port = atoi(optarg);
+                if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
+                    puts("DNS port parameter error!");
+                    exit(EXIT_FAILURE);
+                }
+                if (dnsv6_port != 53) {
+                    add_filter_str(IPPROTO_UDP, dnsv6_port);
+                }
+                dnsv6_port = htons(dnsv6_port);
                 break;
             case 'v':
                 do_dns_verb = 1;
@@ -480,12 +525,14 @@ int main(int argc, char *argv[]) {
     printf("Block passive: %d, Fragment HTTP: %d, Fragment persistent HTTP: %d, "
            "Fragment HTTPS: %d, "
            "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d, "
-           "HTTP AllPorts: %d, HTTP Persistent Nowait: %d, DNS redirect: %d\n",
+           "HTTP AllPorts: %d, HTTP Persistent Nowait: %d, DNS redirect: %d, "
+           "DNSv6 redirect: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
-           do_http_allports, do_fragment_http_persistent_nowait, do_dns_redirect
+           do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
+           do_dnsv6_redirect
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -770,17 +817,17 @@ int main(int argc, char *argv[]) {
             }
 
             /* Else if we got UDP packet with data */
-            else if (do_dns_redirect &&
-                (packet_type == ipv4_udp_data || packet_type == ipv6_udp_data)) {
-
+            else if ((do_dnsv4_redirect && (packet_type == ipv4_udp_data)) ||
+                     (do_dnsv6_redirect && (packet_type == ipv6_udp_data)))
+            {
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND) {
                     if ((packet_v4 && dns_handle_incoming(&ppIpHdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen,
                                         &dns_conn_info, 0))
-                        /*||
+                        ||
                         (packet_v6 && dns_handle_incoming(ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen,
-                                        &dns_conn_info, 1))*/)
+                                        &dns_conn_info, 1)))
                     {
                         /* Changing source IP and port to the values
                          * from DNS conntrack */
@@ -807,10 +854,10 @@ int main(int argc, char *argv[]) {
                     if ((packet_v4 && dns_handle_outgoing(&ppIpHdr->SrcAddr, ppUdpHdr->SrcPort,
                                         &ppIpHdr->DstAddr, ppUdpHdr->DstPort,
                                         packet_data, packet_dataLen, 0))
-                        /*||
+                        ||
                         (packet_v6 && dns_handle_outgoing(ppIpV6Hdr->SrcAddr, ppUdpHdr->SrcPort,
                                         ppIpV6Hdr->DstAddr, ppUdpHdr->DstPort,
-                                        packet_data, packet_dataLen, 1))*/)
+                                        packet_data, packet_dataLen, 1)))
                     {
                         /* Changing destination IP and port to the values
                          * from configuration */
@@ -819,7 +866,7 @@ int main(int argc, char *argv[]) {
                             ppUdpHdr->DstPort = dnsv4_port;
                         }
                         else if (packet_v6) {
-                            ipv6_copy_addr(ppIpV6Hdr->DstAddr, dnsv6_addr);
+                            ipv6_copy_addr(ppIpV6Hdr->DstAddr, (uint32_t*)dnsv6_addr.s6_addr);
                             ppUdpHdr->DstPort = dnsv6_port;
                         }
                         should_recalc_checksum = 1;
