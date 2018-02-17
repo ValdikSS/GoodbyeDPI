@@ -23,14 +23,16 @@ Usage: goodbyedpi.exe [OPTION...]
  -e [value]  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
  -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
- --port      [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
- --ip-id     [value]    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).
-                        This option can be supplied multiple times.
- --dns-addr  [value]    redirect UDP DNS requests to the supplied IP address (experimental)
- --dns-port  [value]    redirect UDP DNS requests to the supplied port (53 by default)
- --dns-verb             print verbose DNS redirection messages
- --blacklist [txtfile]  perform HTTP tricks only to host names and subdomains from
-                        supplied text file. This option can be supplied multiple times.
+ --port        [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
+ --ip-id       [value]    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).
+                          This option can be supplied multiple times.
+ --dns-addr    [value]    redirect UDP DNS requests to the supplied IP address (experimental)
+ --dns-port    [value]    redirect UDP DNS requests to the supplied port (53 by default)
+ --dnsv6-addr  [value]    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)
+ --dnsv6-port  [value]    redirect UDPv6 DNS requests to the supplied port (53 by default)
+ --dns-verb               print verbose DNS redirection messages
+ --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from
+                          supplied text file. This option can be supplied multiple times.
 
  -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)
