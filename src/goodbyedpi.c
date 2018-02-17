@@ -60,16 +60,16 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 #define IPID_TEMPLATE "#IPID#"
 #define FILTER_STRING_TEMPLATE \
         "(tcp and " \
-        "(inbound and (" \
+        "((inbound and (" \
          "(" \
           "(" \
-           "((ip.Id >= 0x0 and ip.Id <= 0xF) " IPID_TEMPLATE \
+           "(ipv6 or (ip.Id >= 0x0 and ip.Id <= 0xF) " IPID_TEMPLATE \
            ") and " \
            "tcp.SrcPort == 80 and tcp.Ack" \
           ") or " \
           "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
          ")" \
-         " and (" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC ")) or " \
+         " and (" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC "))) or " \
         "(outbound and " \
          "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
          "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
@@ -701,8 +701,20 @@ int main(int argc, char *argv[]) {
 
                     /* Drop packets from filter with HTTP 30x Redirect */
                     if (do_passivedpi && is_passivedpi_redirect(packet_data, packet_dataLen)) {
-                        //printf("Dropping HTTP Redirect packet!\n");
-                        should_reinject = 0;
+                        if (packet_v4) {
+                            //printf("Dropping HTTP Redirect packet!\n");
+                            should_reinject = 0;
+                        }
+                        else if (packet_v6 && WINDIVERT_IPV6HDR_GET_FLOWLABEL(ppIpV6Hdr) == 0x0) {
+                                /* Contrary to IPv4 where we get only packets with IP ID 0x0-0xF,
+                                 * for IPv6 we got all the incoming data packets since we can't
+                                 * filter them in a driver.
+                                 *
+                                 * Handle only IPv6 Flow Label == 0x0 for now
+                                 */
+                                //printf("Dropping HTTP Redirect packet!\n");
+                                should_reinject = 0;
+                        }
                     }
                 }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
