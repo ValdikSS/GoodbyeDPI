@@ -8,8 +8,8 @@
 #include <windows.h>
 #include <stdio.h>
 #include "goodbyedpi.h"
-#include "uthash.h"
-#include "getline.h"
+#include "utils/uthash.h"
+#include "utils/getline.h"
 
 typedef struct blackwhitelist_record {
     const char *host;

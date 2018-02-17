@@ -13,7 +13,7 @@
 #include <ws2tcpip.h>
 #include "windivert.h"
 #include "goodbyedpi.h"
-#include "repl_str.h"
+#include "utils/repl_str.h"
 #include "service.h"
 #include "dnsredir.h"
 #include "blackwhitelist.h"

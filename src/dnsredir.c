@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include "goodbyedpi.h"
 #include "dnsredir.h"
-#include "uthash.h"
+#include "utils/uthash.h"
 
 /* key ('4' for IPv4 or '6' for IPv6 + srcip[16] + srcport[2]) */
 #define UDP_CONNRECORD_KEY_LEN 19

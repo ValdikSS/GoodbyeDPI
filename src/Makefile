@@ -2,8 +2,8 @@ ifndef MSYSTEM
 	CPREFIX = x86_64-w64-mingw32-
 endif
 
-WINDIVERTHEADERS = ../../include
-WINDIVERTLIBS = ../binary
+WINDIVERTHEADERS = ../../../include
+WINDIVERTLIBS = ../../binary
 
 TARGET = goodbyedpi.exe
 LIBS = -L$(WINDIVERTLIBS) -lWinDivert -lws2_32
@@ -18,8 +18,8 @@ LDFLAGS = -Wl,-O1,--sort-common,--as-needed
 default: manifest $(TARGET)
 all: default
 
-OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c)) goodbyedpi-rc.o
-HEADERS = $(wildcard *.h)
+OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c utils/*.c)) goodbyedpi-rc.o
+HEADERS = $(wildcard *.h utils/*.h)
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -30,8 +30,8 @@ manifest:
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(LDFLAGS) $(LIBS) -s -o $@
+	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -s -o $@
 
 clean:
-	-rm -f *.o
+	-rm -f *.o utils/*.o
 	-rm -f $(TARGET)
