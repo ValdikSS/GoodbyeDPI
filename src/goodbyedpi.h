@@ -1,6 +1,6 @@
-#define HOST_MAXLEN 253
+#include "config.h"
 
-#ifndef DEBUG
+#ifndef GoodbyeDPI_DEBUG
 #define debug(...) do {} while (0)
 #else
 #define debug(...) printf(__VA_ARGS__)

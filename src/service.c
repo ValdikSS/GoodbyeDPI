@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include "goodbyedpi.h"
 #include "service.h"
-
-#define SERVICE_NAME "GoodbyeDPI"
+#include "config.h"
 
 static SERVICE_STATUS ServiceStatus;
 static SERVICE_STATUS_HANDLE hStatus;

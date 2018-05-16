@@ -1,0 +1,11 @@
+#pragma once
+static const char SERVICE_NAME[]    = "@GoodbyeDPI_SERVICE_NAME@";
+static const char VERSION[] = "@GoodbyeDPI_VERSION@";
+
+enum{
+    HOST_MAXLEN=@GoodbyeDPI_HOST_MAXLEN@u,
+    MAX_FILTERS=@GoodbyeDPI_MAX_FILTERS@u,
+    MAX_PACKET_SIZE=@GoodbyeDPI_MAX_PACKET_SIZE@u
+};
+
+#cmakedefine GoodbyeDPI_DEBUG
