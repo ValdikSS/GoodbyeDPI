@@ -84,11 +84,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
     if (!http_fragment_size) { \
-        if (fragment_size <= 0 || fragment_size > 65535) { \
-            puts("Fragment size should be in range [0 - 65535]\n"); \
-            exit(EXIT_FAILURE); \
-        } \
-        http_fragment_size = fragment_size; \
+        http_fragment_size = (unsigned int)fragment_size; \
     } \
     else if (http_fragment_size != (unsigned int)fragment_size) { \
         printf( \
@@ -101,13 +97,13 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 static int running_from_service = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
-static const char *http10_redirect_302 = "HTTP/1.0 302 ";
-static const char *http11_redirect_302 = "HTTP/1.1 302 ";
-static const char *http_host_find = "\r\nHost: ";
-static const char *http_host_replace = "\r\nhoSt: ";
-static const char *http_useragent_find = "\r\nUser-Agent: ";
-static const char *location_http = "\r\nLocation: http://";
-static const char *connection_close = "\r\nConnection: close";
+static const char http10_redirect_302[] = "HTTP/1.0 302 ";
+static const char http11_redirect_302[] = "HTTP/1.1 302 ";
+static const char http_host_find[] = "\r\nHost: ";
+static const char http_host_replace[] = "\r\nhoSt: ";
+static const char http_useragent_find[] = "\r\nUser-Agent: ";
+static const char location_http[] = "\r\nLocation: http://";
+static const char connection_close[] = "\r\nConnection: close";
 static const char *http_methods[] = {
     "GET ",
     "HEAD ",
@@ -140,7 +136,7 @@ static void add_filter_str(int proto, int port) {
                       "(tcp.SrcPort == %d or tcp.DstPort == %d))";
 
     char *current_filter = filter_string;
-    int new_filter_size = strlen(current_filter) +
+    size_t new_filter_size = strlen(current_filter) +
             (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
     char *new_filter = malloc(new_filter_size);
 
@@ -182,10 +178,12 @@ static void finalize_filter_strings() {
     filter_passive_string = newstr;
 }
 
-static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int nlen) {
+static char* dumb_memmem(const char* haystack, unsigned int hlen,
+                         const char* needle, size_t nlen)
+{
     // naive implementation
     if (nlen > hlen) return NULL;
-    int i;
+    size_t i;
     for (i=0; i<hlen-nlen+1; i++) {
         if (memcmp(haystack+i,needle,nlen)==0) {
             return (char*)(haystack+i);
@@ -193,6 +191,20 @@ static char* dumb_memmem(const char* haystack, int hlen, const char* needle, int
     }
     return NULL;
 }
+
+unsigned short int atousi(const char *str, const char *msg) {
+    long unsigned int res = strtoul(str, NULL, 10u);
+    enum {
+        limitValue=0xFFFFu
+    };
+
+    if(res > limitValue) {
+        puts(msg);
+        exit(EXIT_FAILURE);
+    }
+    return (unsigned short int)res;
+}
+
 
 static HANDLE init(char *filter, UINT64 flags) {
     LPTSTR errormessage = NULL;
@@ -239,39 +251,39 @@ static void sigint_handler(int sig __attribute__((unused))) {
     exit(EXIT_SUCCESS);
 }
 
-static void mix_case(char *pktdata, int pktlen) {
-    int i;
+static void mix_case(char *pktdata, unsigned int pktlen) {
+    unsigned int i;
 
     if (pktlen <= 0) return;
     for (i = 0; i < pktlen; i++) {
         if (i % 2) {
-            pktdata[i] = toupper(pktdata[i]);
+            pktdata[i] = (char) toupper(pktdata[i]);
         }
     }
 }
 
-static int is_passivedpi_redirect(const char *pktdata, int pktlen) {
+static int is_passivedpi_redirect(const char *pktdata, unsigned int pktlen) {
     /* First check if this is HTTP 302 redirect */
-    if (memcmp(pktdata, http11_redirect_302, strlen(http11_redirect_302)) == 0 ||
-        memcmp(pktdata, http10_redirect_302, strlen(http10_redirect_302)) == 0)
+    if (memcmp(pktdata, http11_redirect_302, sizeof(http11_redirect_302)-1) == 0 ||
+        memcmp(pktdata, http10_redirect_302, sizeof(http10_redirect_302)-1) == 0)
     {
         /* Then check if this is a redirect to new http site with Connection: close */
-        if (dumb_memmem(pktdata, pktlen, location_http, strlen(location_http)) &&
-            dumb_memmem(pktdata, pktlen, connection_close, strlen(connection_close))) {
+        if (dumb_memmem(pktdata, pktlen, location_http, sizeof(location_http)-1) &&
+            dumb_memmem(pktdata, pktlen, connection_close, sizeof(connection_close)-1)) {
             return TRUE;
         }
     }
     return FALSE;
 }
 
-static int find_header_and_get_info(const char *pktdata, int pktlen,
+static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
                 const char *hdrname,
                 char **hdrnameaddr,
-                char **hdrvalueaddr, int *hdrvaluelen) {
+                char **hdrvalueaddr, unsigned int *hdrvaluelen) {
     char *data_addr_rn;
     char *hdr_begin;
 
-    *hdrvaluelen = 0;
+    *hdrvaluelen = 0u;
     *hdrnameaddr = NULL;
     *hdrvalueaddr = NULL;
 
@@ -291,20 +303,20 @@ static int find_header_and_get_info(const char *pktdata, int pktlen,
                         "\r\n", 2);
     if (data_addr_rn) {
         *hdrvaluelen = (PVOID)data_addr_rn - (PVOID)*hdrvalueaddr;
-        if (*hdrvaluelen > 0 && *hdrvaluelen <= 512)
+        if (*hdrvaluelen > 0u && *hdrvaluelen <= 512u)
             return TRUE;
     }
     return FALSE;
 }
 
-static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, int size) {
-    if (size >= 1 && size <= 65535) {
-        ppTcpHdr->Window = htons(size);
+static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
+    if (size >= 1 && size <= 0xFFFFu) {
+        ppTcpHdr->Window = htons((u_short)size);
     }
 }
 
 /* HTTP method end without trailing space */
-static PVOID find_http_method_end(const char *pkt, int http_frag, int *is_fragmented) {
+static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
     unsigned int i;
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
@@ -364,11 +376,11 @@ int main(int argc, char *argv[]) {
     uint16_t dnsv4_port = htons(53);
     uint16_t dnsv6_port = htons(53);
     char *host_addr, *useragent_addr, *method_addr;
-    int host_len, useragent_len;
+    unsigned int host_len, useragent_len;
     int http_req_fragmented;
 
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
-    int hdr_value_len;
+    unsigned int hdr_value_len;
 
     // Make sure to search DLLs only in safe path, not in current working dir.
     SetDllDirectory("");
@@ -425,12 +437,12 @@ int main(int argc, char *argv[]) {
                 = do_fragment_http = do_fragment_https \
                 = do_fragment_http_persistent \
                 = do_fragment_http_persistent_nowait = 1;
-                https_fragment_size = 40;
+                https_fragment_size = 40u;
                 break;
             case '3':
                 do_passivedpi = do_host = do_host_removespace \
                 = do_fragment_https = 1;
-                https_fragment_size = 40;
+                https_fragment_size = 40u;
                 break;
             case '4':
                 do_passivedpi = do_host = do_host_removespace = 1;
@@ -453,22 +465,18 @@ int main(int argc, char *argv[]) {
                 break;
             case 'f':
                 do_fragment_http = 1;
-                SET_HTTP_FRAGMENT_SIZE_OPTION(atoi(optarg));
+                SET_HTTP_FRAGMENT_SIZE_OPTION(atousi(optarg, "Fragment size should be in range [0 - 0xFFFF]\n"));
                 break;
             case 'k':
                 do_fragment_http_persistent = 1;
-                SET_HTTP_FRAGMENT_SIZE_OPTION(atoi(optarg));
+                SET_HTTP_FRAGMENT_SIZE_OPTION(atousi(optarg, "Fragment size should be in range [0 - 0xFFFF]\n"));
                 break;
             case 'n':
                 do_fragment_http_persistent_nowait = 1;
                 break;
             case 'e':
                 do_fragment_https = 1;
-                https_fragment_size = atoi(optarg);
-                if (https_fragment_size <= 0 || https_fragment_size > 65535) {
-                    puts("Fragment size should be in range [0 - 65535]\n");
-                    exit(EXIT_FAILURE);
-                }
+                https_fragment_size = atousi(optarg, "Fragment size should be in range [0 - 65535]\n");
                 break;
             case 'w':
                 do_http_allports = 1;
@@ -486,11 +494,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 'i':
                 /* i is used as a temporary variable here */
-                i = atoi(optarg);
-                if (i < 0 || i > 65535) {
-                    printf("IP ID parameter error!\n");
-                    exit(EXIT_FAILURE);
-                }
+                i = atousi(optarg, "IP ID parameter error!\n");
                 add_ip_id_str(i);
                 i = 0;
                 break;
@@ -533,11 +537,7 @@ int main(int argc, char *argv[]) {
                         "--dns-port");
                     exit(EXIT_FAILURE);
                 }
-                dnsv4_port = atoi(optarg);
-                if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
-                    puts("DNS port parameter error!");
-                    exit(EXIT_FAILURE);
-                }
+                dnsv4_port = atousi(optarg, "DNS port parameter error!");
                 if (dnsv4_port != 53) {
                     add_filter_str(IPPROTO_UDP, dnsv4_port);
                 }
@@ -550,11 +550,7 @@ int main(int argc, char *argv[]) {
                         "--dnsv6-port");
                     exit(EXIT_FAILURE);
                 }
-                dnsv6_port = atoi(optarg);
-                if (atoi(optarg) <= 0 || atoi(optarg) > 65535) {
-                    puts("DNS port parameter error!");
-                    exit(EXIT_FAILURE);
-                }
+                dnsv6_port = atousi(optarg, "DNS port parameter error!");
                 if (dnsv6_port != 53) {
                     add_filter_str(IPPROTO_UDP, dnsv6_port);
                 }
@@ -733,7 +729,7 @@ int main(int argc, char *argv[]) {
                         packet_dataLen > 16 &&
                         (do_http_allports ? 1 : (ppTcpHdr->DstPort == htons(80))) &&
                         find_http_method_end(packet_data,
-                                             (do_fragment_http ? http_fragment_size : 0),
+                                             (do_fragment_http ? http_fragment_size : 0u),
                                              &http_req_fragmented) &&
                         (do_host || do_host_removespace ||
                         do_host_mixedcase || do_fragment_http_persistent))
