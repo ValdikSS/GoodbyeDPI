@@ -89,7 +89,7 @@ inline static void fill_data_from_key(uint8_t *is_ipv6, uint32_t srcip[4], uint1
 }
 
 inline static void construct_key(const uint32_t srcip[4], const uint16_t srcport,
-                                 char *key, int is_ipv6)
+                                 char *key, const uint8_t is_ipv6)
 {
     debug("Construct key enter\n");
     if (key) {
@@ -135,7 +135,7 @@ static int check_get_udp_conntrack_key(const char *key, udp_connrecord_t **connr
 
 static int add_udp_conntrack(const uint32_t srcip[4], const uint16_t srcport,
                              const uint32_t dstip[4], const uint16_t dstport,
-                             const int is_ipv6
+                             const uint8_t is_ipv6
                             )
 {
     if (!(srcip && srcport && dstip && dstport))

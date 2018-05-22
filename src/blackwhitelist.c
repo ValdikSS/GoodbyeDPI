@@ -84,7 +84,7 @@ int blackwhitelist_load_list(const char *filename) {
     return TRUE;
 }
 
-int blackwhitelist_check_hostname(const char *host_addr, int host_len) {
+int blackwhitelist_check_hostname(const char *host_addr, size_t host_len) {
     char current_host[HOST_MAXLEN + 1];
     char *tokenized_host = NULL;
 
