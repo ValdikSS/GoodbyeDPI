@@ -79,7 +79,7 @@ To build x86 exe run:
 
 And for x86_64:
 
-`make CPREFIX=x86_64-w64-mingw32- WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
+`make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=/path/to/windivert/include WINDIVERTLIBS=/path/to/windivert/amd64`
 
 # How to install as Windows Service
 

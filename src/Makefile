@@ -4,14 +4,27 @@ endif
 
 WINDIVERTHEADERS = ../../../include
 WINDIVERTLIBS = ../../binary
+MINGWLIB = /usr/x86_64-w64-mingw32/lib/
 
 TARGET = goodbyedpi.exe
+# Linking SSP does not work for some reason, the executable doesn't start.
+#LIBS = -L$(WINDIVERTLIBS) -Wl,-Bstatic -lssp -Wl,-Bdynamic -lWinDivert -lws2_32
 LIBS = -L$(WINDIVERTLIBS) -lWinDivert -lws2_32
 CC = $(CPREFIX)gcc
 CCWINDRES = $(CPREFIX)windres
-CFLAGS = -Wall -Wextra -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
-         -O2 -pie -fPIE -Wformat -Werror=format-security -D_FORTIFY_SOURCE=2
-LDFLAGS = -Wl,-O1,--sort-common,--as-needed
+CFLAGS = -std=c99 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
+         -O2 -D_FORTIFY_SOURCE=2 \
+         -Wall -Wextra -Wpedantic -Wformat=2 -Wshadow -Wstrict-aliasing=1 -Werror=format-security \
+         -Wfloat-equal -Wcast-align -Wsign-conversion \
+         #-fstack-protector-strong
+LDFLAGS = -Wl,-O1,-pie,--dynamicbase,--nxcompat,--sort-common,--as-needed \
+-Wl,--image-base,0x140000000 -Wl,--disable-auto-image-base
+
+ifdef BIT64
+	LDFLAGS += -Wl,--high-entropy-va -Wl,--pic-executable,-e,mainCRTStartup
+else
+	LDFLAGS += -Wl,--pic-executable,-e,_mainCRTStartup
+endif
 
 .PHONY: default all clean
 
