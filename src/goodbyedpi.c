@@ -351,8 +351,8 @@ int main(int argc, char *argv[]) {
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_blacklist = 0;
-    unsigned int http_fragment_size = 2;
-    unsigned int https_fragment_size = 2;
+    unsigned int http_fragment_size = 0;
+    unsigned int https_fragment_size = 0;
     uint32_t dnsv4_addr = 0;
     struct in6_addr dnsv6_addr = {0};
     struct in6_addr dns_temp_addr = {0};
@@ -399,6 +399,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 1) {
         /* enable mode -1 by default */
+        http_fragment_size = https_fragment_size = 2;
         do_passivedpi = do_host = do_host_removespace \
                 = do_fragment_http = do_fragment_https \
                 = do_fragment_http_persistent \
@@ -592,6 +593,11 @@ int main(int argc, char *argv[]) {
                 exit(EXIT_FAILURE);
         }
     }
+
+    if (!http_fragment_size)
+        http_fragment_size = 2;
+    if (!https_fragment_size)
+        https_fragment_size = 2;
 
     printf("Block passive: %d, Fragment HTTP: %d, Fragment persistent HTTP: %d, "
            "Fragment HTTPS: %d, "
