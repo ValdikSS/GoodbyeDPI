@@ -59,7 +59,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 /* #IPID# is a template to find&replace */
 #define IPID_TEMPLATE "#IPID#"
 #define FILTER_STRING_TEMPLATE \
-        "(tcp and " \
+        "(tcp and !impostor and !loopback and " \
         "((inbound and (" \
          "(" \
           "(" \
@@ -75,6 +75,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
          "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
         "))"
 #define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
+        "!impostor and !loopback and " \
         "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
         DIVERT_NO_LOCALNETSv4_SRC
@@ -131,8 +132,10 @@ static char *filter_string = NULL;
 static char *filter_passive_string = NULL;
 
 static void add_filter_str(int proto, int port) {
-    const char *udp = " or (udp and (udp.SrcPort == %d or udp.DstPort == %d))";
-    const char *tcp = " or (tcp and (tcp.SrcPort == %d or tcp.DstPort == %d))";
+    const char *udp = " or (udp and !impostor and !loopback and " \
+                      "(udp.SrcPort == %d or udp.DstPort == %d))";
+    const char *tcp = " or (tcp and !impostor and !loopback and " \
+                      "(tcp.SrcPort == %d or tcp.DstPort == %d))";
 
     char *current_filter = filter_string;
     int new_filter_size = strlen(current_filter) +
