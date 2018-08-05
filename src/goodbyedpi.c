@@ -124,6 +124,7 @@ static struct option long_options[] = {
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
+    {"whitelist",   required_argument, 0,  'h' },
     {"ip-id",       required_argument, 0,  'i' },
     {0,             0,                 0,   0  }
 };
@@ -353,7 +354,8 @@ int main(int argc, char *argv[]) {
         do_http_allports = 0,
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
-        do_dns_verb = 0, do_blacklist = 0;
+        do_dns_verb = 0, 
+        do_blacklist = 0, do_whitelist = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
     uint32_t dnsv4_addr = 0;
@@ -567,6 +569,13 @@ int main(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 break;
+            case 'h':
+                do_whitelist = 1;
+                if (!blackwhitelist_load_list(optarg)) {
+                    printf("Can't load whitelist from file!\n");
+                    exit(EXIT_FAILURE);
+                }
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -588,6 +597,8 @@ int main(int argc, char *argv[]) {
                 " --dns-verb               print verbose DNS redirection messages\n"
                 " --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
                 "                          supplied text file. This option can be supplied multiple times.\n"
+                " --whitelist   [txtfile]  Do not perform HTTP tricks to host names and subdomains from\n"
+                "                          supplied text file. This option can be supplied multiple times.\n"
                 "\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
@@ -595,6 +606,11 @@ int main(int argc, char *argv[]) {
                 " -4          -p -r -s (best speed)");
                 exit(EXIT_FAILURE);
         }
+    }
+
+    if (do_blacklist && do_whitelist) {
+        printf("Can't use blacklist and whitelist at the same time!\n");
+        exit(EXIT_FAILURE);      
     }
 
     if (!http_fragment_size)
@@ -741,6 +757,7 @@ int main(int argc, char *argv[]) {
                     if (find_header_and_get_info(packet_data, packet_dataLen,
                         http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len) &&
                         hdr_value_len > 0 && hdr_value_len <= HOST_MAXLEN &&
+                        (do_whitelist ? !blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1) &&
                         (do_blacklist ? blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1))
                     {
                         host_addr = hdr_value_addr;
