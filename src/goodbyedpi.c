@@ -21,6 +21,8 @@
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
 
+#define GOODBYEDPI_VERSION "v0.1.5"
+
 #define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
 #define MAX_FILTERS 4
@@ -396,7 +398,8 @@ int main(int argc, char *argv[]) {
         filter_passive_string = strdup(FILTER_PASSIVE_STRING_TEMPLATE);
 
     printf(
-        "GoodbyeDPI: Passive DPI blocker and Active DPI circumvention utility\n"
+        "GoodbyeDPI " GOODBYEDPI_VERSION
+        ": Passive DPI blocker and Active DPI circumvention utility\n"
         "https://github.com/ValdikSS/GoodbyeDPI\n\n"
     );
 
