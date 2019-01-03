@@ -605,11 +605,10 @@ int main(int argc, char *argv[]) {
     if (!https_fragment_size)
         https_fragment_size = 2;
 
-    printf("Block passive: %d, Fragment HTTP: %d, Fragment persistent HTTP: %d, "
-           "Fragment HTTPS: %d, "
-           "hoSt: %d, Host no space: %d, Additional space: %d, Mix Host: %d, "
-           "HTTP AllPorts: %d, HTTP Persistent Nowait: %d, DNS redirect: %d, "
-           "DNSv6 redirect: %d\n",
+    printf("Block passive: %d\nFragment HTTP: %d\nFragment persistent HTTP: %d\n"
+           "Fragment HTTPS: %d\nhoSt: %d\nHost no space: %d\nAdditional space: %d\n"
+           "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
+           "DNS redirect: %d\nDNSv6 redirect: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
