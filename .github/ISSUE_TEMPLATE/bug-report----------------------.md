@@ -1,13 +1,13 @@
 ---
 name: Bug report / сообщение об ошибке
-about: Сообщить об ошибке в программе
+about: Report software issue / сообщить об ошибке в программе
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-<--!
+<!--
 WARNING! Please pay some attention!
 GoodbyeDPI does not guarantee to work on your ISP on 100% or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it.
 Please report software bugs, such as: website incompatibility (if the website works without GoodbyeDPI but breaks with GoobyeDPI enabled), antivirus incompatibility, DNS redirection problems, incorrect packet handling, and other software issues.
@@ -19,7 +19,7 @@ GoodbyeDPI не гарантирует ни 100% работу с вашим пр
 Также посмотрите другие открытые и закрытые баги. Возможно, ваш вопрос или проблема уже обсуждались.
 -->
 
-**Describe the bug / Опишите ошибку**
+**Describe the bug / Опишите проблему**
 A clear and concise description of what the bug is. If the issue about software incompatibility, include your operating system version and software name/version.
 Подробно опишите, в чём заключается проблема. Если проблема касается совместимости с другими программами, укажите версию вашей операционной системы, имя и версию программы.
 
