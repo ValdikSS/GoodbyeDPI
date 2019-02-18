@@ -70,6 +70,7 @@ int blackwhitelist_load_list(const char *filename) {
         if (strlen(line) > HOST_MAXLEN) {
             printf("WARNING: host %s exceeds maximum host length and has not been added\n",
                 line);
+            fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
             continue;
         }
         if (strlen(line) < 4)
@@ -80,6 +81,7 @@ int blackwhitelist_load_list(const char *filename) {
     free(line);
     if (!blackwhitelist) return FALSE;
     printf("Loaded %d hosts from file %s\n", cnt, filename);
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     fclose(fp);
     return TRUE;
 }
