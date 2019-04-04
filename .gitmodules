@@ -1,0 +1,4 @@
+[submodule "WinDivert"]
+	path = WinDivert
+	url = https://github.com/basil00/Divert
+	branch = master

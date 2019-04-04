@@ -1,0 +1,33 @@
+#include "winver.h"
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @VERSION_MAJOR@,@VERSION_MINOR@,@VERSION_PATCH@,@VERSION_TWEAK@
+ PRODUCTVERSION @VERSION_MAJOR@,@VERSION_MINOR@,@VERSION_PATCH@,@VERSION_TWEAK@
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004b0"
+        BEGIN
+            VALUE "FileDescription", "GoodbyeDPI—Passive Deep Packet Inspection blocker and Active DPI circumvention utility (for Windows)."
+            VALUE "FileVersion", "@GoodbyeDPI_VERSION@"
+            VALUE "InternalName", "@PACKAGE_NAME@"
+            VALUE "LegalCopyright", "@LICENSE_TEXT@"
+            VALUE "ProductName", "@PACKAGE_NAME@"
+            VALUE "ProductVersion", "@GoodbyeDPI_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1200
+    END
+END
+1 24 "goodbyedpi.exe.manifest" 
+id ICON "icon.ico"
