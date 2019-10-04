@@ -17,6 +17,7 @@
 #include "service.h"
 #include "dnsredir.h"
 #include "blackwhitelist.h"
+#include "fakepackets.h"
 
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
@@ -26,7 +27,6 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 #define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
 #define MAX_FILTERS 4
-#define MAX_PACKET_SIZE 9016
 
 #define DIVERT_NO_LOCALNETSv4_DST "(" \
                    "(ip.DstAddr < 127.0.0.1 or ip.DstAddr > 127.255.255.255) and " \
@@ -123,6 +123,8 @@ static struct option long_options[] = {
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
     {"ip-id",       required_argument, 0,  'i' },
+    {"set-ttl",     required_argument, 0,  '$' },
+    {"wrong-chksum",no_argument,       0,  '%' },
     {0,             0,                 0,   0  }
 };
 
@@ -203,6 +205,19 @@ unsigned short int atousi(const char *str, const char *msg) {
         exit(EXIT_FAILURE);
     }
     return (unsigned short int)res;
+}
+
+BYTE atoub(const char *str, const char *msg) {
+    long unsigned int res = strtoul(str, NULL, 10u);
+    enum {
+        limitValue=0xFFu
+    };
+
+    if(res > limitValue) {
+        puts(msg);
+        exit(EXIT_FAILURE);
+    }
+    return (BYTE)res;
 }
 
 
@@ -367,9 +382,11 @@ int main(int argc, char *argv[]) {
         do_http_allports = 0,
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
-        do_dns_verb = 0, do_blacklist = 0;
+        do_dns_verb = 0, do_blacklist = 0,
+        do_wrong_chksum = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
+    BYTE ttl_of_fake_packet = 0;
     uint32_t dnsv4_addr = 0;
     struct in6_addr dnsv6_addr = {0};
     struct in6_addr dns_temp_addr = {0};
@@ -566,6 +583,12 @@ int main(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 break;
+            case '$':
+                ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
+                break;
+            case '%':
+                do_wrong_chksum = 1;
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -587,6 +610,12 @@ int main(int argc, char *argv[]) {
                 " --dns-verb               print verbose DNS redirection messages\n"
                 " --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
                 "                          supplied text file. This option can be supplied multiple times.\n"
+                " --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.\n"
+                "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
+                "                          Could be combined with --wrong-chksum.\n"
+                " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
+                "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
+                "                          Could be combined with --set-ttl\n."
                 "\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
@@ -604,13 +633,14 @@ int main(int argc, char *argv[]) {
     printf("Block passive: %d\nFragment HTTP: %d\nFragment persistent HTTP: %d\n"
            "Fragment HTTPS: %d\nhoSt: %d\nHost no space: %d\nAdditional space: %d\n"
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
-           "DNS redirect: %d\nDNSv6 redirect: %d\n",
+           "DNS redirect: %d\nDNSv6 redirect: %d\n"
+           "Fake requests, TTL: %hu\nFake requests, wrong checksum: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
-           do_dnsv6_redirect
+           do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -724,6 +754,21 @@ int main(int argc, char *argv[]) {
                         }
                     }
                 }
+                /* Handle OUTBOUND packet on port 443, search for something that resembles
+                 * TLS handshake, send fake request.
+                 */
+                else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND &&
+                        ((do_fragment_https ? packet_dataLen == https_fragment_size : 0) ||
+                         packet_dataLen > 16) &&
+                         ppTcpHdr->DstPort != htons(80) &&
+                         (ttl_of_fake_packet || do_wrong_chksum)
+                        )
+                {
+                    if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
+                        send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
+                                                ttl_of_fake_packet, do_wrong_chksum);
+                    }
+                }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
                 else if (addr.Direction == WINDIVERT_DIRECTION_OUTBOUND && 
                         packet_dataLen > 16 &&
@@ -743,6 +788,11 @@ int main(int argc, char *argv[]) {
                     {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
+
+                        if (ttl_of_fake_packet || do_wrong_chksum)
+                            send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
+                                                   ttl_of_fake_packet, do_wrong_chksum);
+
 
                         /*
                          * Handle new HTTP request in new

@@ -1,4 +1,5 @@
 #define HOST_MAXLEN 253
+#define MAX_PACKET_SIZE 9016
 
 #ifndef DEBUG
 #define debug(...) do {} while (0)

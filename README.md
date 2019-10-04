@@ -33,6 +33,10 @@ Usage: goodbyedpi.exe [OPTION...]
  --dns-verb               print verbose DNS redirection messages
  --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from
                           supplied text file. This option can be supplied multiple times.
+ --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.
+                          DANGEROUS! May break websites in unexpected ways. Use with care.
+ --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
+                          May not work in a VM or with some routers, but is safer than set-ttl.
 
  -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)
@@ -56,7 +60,7 @@ Most Passive DPI send HTTP 302 Redirect if you try to access blocked website ove
 
 ### Active DPI
 
-Active DPI is more tricky to fool. Currently the software uses 6 methods to circumvent Active DPI:
+Active DPI is more tricky to fool. Currently the software uses 7 methods to circumvent Active DPI:
 
 * TCP-level fragmentation for first data packet
 * TCP-level fragmentation for persistent (keep-alive) HTTP sessions
@@ -64,6 +68,7 @@ Active DPI is more tricky to fool. Currently the software uses 6 methods to circ
 * Removing space between header name and value in `Host` header
 * Adding additional space between HTTP Method (GET, POST etc) and URI
 * Mixing case of Host header value
+* Sending fake HTTP/HTTPS packets with low Time-To-Live value or incorrect checksum to fool DPI and prevent delivering them to the destination
 
 These methods should not break any website as they're fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
 
