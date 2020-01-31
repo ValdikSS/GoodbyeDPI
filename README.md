@@ -101,6 +101,7 @@ Modify them according to your own needs.
 # Similar projects
 
 - **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for Linux).
+- **[PowerTunnel](https://github.com/krlvm/PowerTunnel)** by @krlvm (for Windows, MacOS and Linux).
 - **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows).
 
 # Kudos
