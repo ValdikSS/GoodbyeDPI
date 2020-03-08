@@ -104,6 +104,7 @@ Modify them according to your own needs.
 - **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows).
 - **[DPITunnel](https://github.com/zhenyolka/DPITunnel)** by @zhenyolka (for Android).
 - **[PowerTunnel](https://github.com/krlvm/PowerTunnel)** by @krlvm (for Windows, MacOS and Linux).
+- **[PowerTunnel for Android](https://github.com/krlvm/PowerTunnel-Android)** by @krlvm (for Android).
 
 # Kudos
 
