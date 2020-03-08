@@ -82,17 +82,8 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
         DIVERT_NO_LOCALNETSv4_SRC
 
-#define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
-    if (!http_fragment_size) { \
-        http_fragment_size = (unsigned int)fragment_size; \
-    } \
-    else if (http_fragment_size != (unsigned int)fragment_size) { \
-        printf( \
-            "WARNING: HTTP fragment size is already set to %d, not changing.\n", \
-            http_fragment_size \
-        ); \
-    } \
-} while (0)
+#define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do{ if (!http_fragment_size) { http_fragment_size = (unsigned int)fragment_size; }else if (http_fragment_size != (unsigned int)fragment_size) { printf("WARNING: HTTP fragment size is already set to %d, not changing.\n", http_fragment_size );fflush(stdout); } }while(0)
+
 
 static int running_from_service = 0;
 static HANDLE filters[MAX_FILTERS];
@@ -144,10 +135,15 @@ static void add_filter_str(int proto, int port) {
 
     strcpy(new_filter, current_filter);
     if (proto == IPPROTO_UDP)
+    {
         sprintf(&(new_filter[strlen(new_filter)]), udp, port, port);
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
+    }
     else
+    {
         sprintf(&(new_filter[strlen(new_filter)]), tcp, port, port);
-
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
+    }
     filter_string = new_filter;
     free(current_filter);
 }
@@ -158,6 +154,7 @@ static void add_ip_id_str(int id) {
     char *addfilter = malloc(strlen(ipid) + 16);
 
     sprintf(addfilter, ipid, id);
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
 
     newstr = repl_str(filter_string, IPID_TEMPLATE, addfilter);
     free(filter_string);
@@ -202,6 +199,7 @@ unsigned short int atousi(const char *str, const char *msg) {
 
     if(res > limitValue) {
         puts(msg);
+        fflush(stdout);
         exit(EXIT_FAILURE);
     }
     return (unsigned short int)res;
@@ -233,6 +231,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                   NULL, errorcode, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                   (LPTSTR)&errormessage, 0, NULL);
     printf("Error opening filter: %s", errormessage);
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     LocalFree(errormessage);
     if (errorcode == 577)
         printf("Windows Server 2016 systems must have secure boot disabled to be "
@@ -244,6 +243,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                "Most probably, you don't have security patches installed and anyone in you LAN or "
                "public Wi-Fi network can get full access to your computer (MS17-010 and others).\n"
                "You should install updates IMMEDIATELY.\n");
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     return NULL;
 }
 
@@ -353,7 +353,7 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
     return NULL;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]){
     static enum packet_type_e {
         unknown,
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
@@ -431,6 +431,7 @@ int main(int argc, char *argv[]) {
         ": Passive DPI blocker and Active DPI circumvention utility\n"
         "https://github.com/ValdikSS/GoodbyeDPI\n\n"
     );
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
 
     if (argc == 1) {
         /* enable mode -1 by default */
@@ -441,7 +442,7 @@ int main(int argc, char *argv[]) {
                 = do_fragment_http_persistent_nowait = 1;
     }
 
-    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mwk:n", long_options, NULL)) != -1){
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -503,6 +504,7 @@ int main(int argc, char *argv[]) {
                 i = atoi(optarg);
                 if (i <= 0 || i > 65535) {
                     printf("Port parameter error!\n");
+                    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
                     exit(EXIT_FAILURE);
                 }
                 if (i != 80 && i != 443)
@@ -522,6 +524,7 @@ int main(int argc, char *argv[]) {
                     do_dnsv4_redirect = 1;
                     if (inet_pton(AF_INET, optarg, &dnsv4_addr) != 1) {
                         puts("DNS address parameter error!");
+                        fflush(stdout);
                         exit(EXIT_FAILURE);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
@@ -529,6 +532,7 @@ int main(int argc, char *argv[]) {
                     break;
                 }
                 puts("DNS address parameter error!");
+                fflush(stdout);
                 exit(EXIT_FAILURE);
                 break;
             case '!':
@@ -538,6 +542,7 @@ int main(int argc, char *argv[]) {
                     do_dnsv6_redirect = 1;
                     if (inet_pton(AF_INET6, optarg, dnsv6_addr.s6_addr) != 1) {
                         puts("DNS address parameter error!");
+                        fflush(stdout);
                         exit(EXIT_FAILURE);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
@@ -545,6 +550,7 @@ int main(int argc, char *argv[]) {
                     break;
                 }
                 puts("DNS address parameter error!");
+                fflush(stdout);
                 exit(EXIT_FAILURE);
                 break;
             case 'g':
@@ -552,6 +558,7 @@ int main(int argc, char *argv[]) {
                     puts("--dns-port should be used with --dns-addr!\n"
                         "Make sure you use --dns-addr and pass it before "
                         "--dns-port");
+                    fflush(stdout);
                     exit(EXIT_FAILURE);
                 }
                 dnsv4_port = atousi(optarg, "DNS port parameter error!");
@@ -565,6 +572,7 @@ int main(int argc, char *argv[]) {
                     puts("--dnsv6-port should be used with --dnsv6-addr!\n"
                         "Make sure you use --dnsv6-addr and pass it before "
                         "--dnsv6-port");
+                    fflush(stdout);
                     exit(EXIT_FAILURE);
                 }
                 dnsv6_port = atousi(optarg, "DNS port parameter error!");
@@ -580,6 +588,7 @@ int main(int argc, char *argv[]) {
                 do_blacklist = 1;
                 if (!blackwhitelist_load_list(optarg)) {
                     printf("Can't load blacklist from file!\n");
+                    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
                     exit(EXIT_FAILURE);
                 }
                 break;
@@ -621,6 +630,7 @@ int main(int argc, char *argv[]) {
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
                 " -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)\n"
                 " -4          -p -r -s (best speed)");
+                fflush(stdout);
                 exit(EXIT_FAILURE);
         }
     }
@@ -642,14 +652,17 @@ int main(int argc, char *argv[]) {
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
            do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum
           );
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
 
     if (do_fragment_http && http_fragment_size > 2) {
         printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
                "with other options. Please use values <= 2 or disable HTTP fragmentation "
                "completely.\n");
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     }
 
     printf("\nOpening filter\n");
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     finalize_filter_strings();
     filter_num = 0;
 
@@ -678,9 +691,10 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Filter activated!\n");
+    fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     signal(SIGINT, sigint_handler);
 
-    while (1) {
+    while(1){
         if (WinDivertRecv(w_filter, packet, sizeof(packet), &addr, &packetLen)) {
             debug("Got %s packet, len=%d!\n", addr.Direction ? "inbound" : "outbound",
                    packetLen);
@@ -986,6 +1000,7 @@ int main(int argc, char *argv[]) {
                         if (do_dns_verb && !should_reinject) {
                             printf("[DNS] Error handling incoming packet: srcport = %hu, dstport = %hu\n",
                                ntohs(ppUdpHdr->SrcPort), ntohs(ppUdpHdr->DstPort));
+                            fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
                         }
                     }
                 }
@@ -1018,6 +1033,7 @@ int main(int argc, char *argv[]) {
                         if (do_dns_verb && !should_reinject) {
                             printf("[DNS] Error handling outgoing packet: srcport = %hu, dstport = %hu\n",
                                ntohs(ppUdpHdr->SrcPort), ntohs(ppUdpHdr->DstPort));
+                            fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
                         }
                     }
                 }
@@ -1034,6 +1050,7 @@ int main(int argc, char *argv[]) {
         else {
             // error, ignore
             printf("Error receiving packet!\n");
+            fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
             break;
         }
     }

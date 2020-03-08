@@ -50,12 +50,14 @@ void flush_dns_cache() {
     if (dnsapi == NULL)
     {
         printf("Can't load dnsapi.dll to flush DNS cache!\n");
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
         exit(EXIT_FAILURE);
     }
 
     DnsFlushResolverCache = (void*)GetProcAddress(dnsapi, "DnsFlushResolverCache");
     if (DnsFlushResolverCache == NULL || !DnsFlushResolverCache())
         printf("Can't flush DNS cache!");
+        fflush(stdout); // In order to properly work with GUI for GoodbyeDPI
     FreeLibrary(dnsapi);
 }
 
