@@ -80,7 +80,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
         "!impostor and !loopback and " \
         "(ipv6 or (ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
-        "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST ")"
+        "(" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC ")"
 
 #define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
     if (!http_fragment_size) { \
