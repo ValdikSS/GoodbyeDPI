@@ -654,7 +654,7 @@ int main(int argc, char *argv[]) {
     filter_num = 0;
 
     if (do_passivedpi) {
-        /* IPv4 only filter for inbound RST packets with ID [0x0; 0xF] */
+        /* IPv4 & IPv6 filter for inbound RST packets with ID [0x0; 0xF] */
         filters[filter_num] = init(
             filter_passive_string,
             WINDIVERT_FLAG_DROP);
