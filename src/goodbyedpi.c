@@ -126,6 +126,7 @@ static struct option long_options[] = {
     {"set-ttl",     required_argument, 0,  '$' },
     {"wrong-chksum",no_argument,       0,  '%' },
     {"native-frag", no_argument,       0,  '*' },
+    {"reverse-frag",no_argument,       0,  '(' },
     {0,             0,                 0,   0  }
 };
 
@@ -452,7 +453,7 @@ int main(int argc, char *argv[]) {
         do_dns_verb = 0, do_blacklist = 0,
         do_fake_packet = 0,
         do_wrong_chksum = 0,
-        do_native_frag = 0;
+        do_native_frag = 0, do_reverse_frag = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
     unsigned int current_fragment_size = 0;
@@ -705,6 +706,9 @@ int main(int argc, char *argv[]) {
                 " --native-frag            fragment (split) the packets by sending them in smaller packets, without\n"
                 "                          shrinking the Window Size. Works faster (does not slow down the connection)\n"
                 "                          and better.\n"
+                " --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the\n"
+                "                          reversed order. Works with the websites which could not handle segmented\n"
+                "                          HTTPS TLS ClientHello (because they receive the TCP flow \"combined\").\n"
                 "\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
@@ -721,6 +725,7 @@ int main(int argc, char *argv[]) {
 
     printf("Block passive: %d\nFragment HTTP: %d\nFragment persistent HTTP: %d\n"
            "Fragment HTTPS: %d\nNative fragmentation (splitting): %d\n"
+           "Fragments sending in reverse: %d\n"
            "hoSt: %d\nHost no space: %d\nAdditional space: %d\n"
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
            "DNS redirect: %d\nDNSv6 redirect: %d\n"
@@ -728,7 +733,7 @@ int main(int argc, char *argv[]) {
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
-           do_native_frag,
+           do_native_frag, do_reverse_frag,
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
            do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum
@@ -992,12 +997,12 @@ int main(int argc, char *argv[]) {
                         send_native_fragment(w_filter, addr, packet, packetLen, packet_data,
                                             packet_dataLen,packet_v4, packet_v6,
                                             ppIpHdr, ppIpV6Hdr, ppTcpHdr,
-                                            current_fragment_size, 0);
+                                            current_fragment_size, do_reverse_frag);
 
                         send_native_fragment(w_filter, addr, packet, packetLen, packet_data,
                                             packet_dataLen,packet_v4, packet_v6,
                                             ppIpHdr, ppIpV6Hdr, ppTcpHdr,
-                                            current_fragment_size, 1);
+                                            current_fragment_size, !do_reverse_frag);
                         continue;
                     }
                 }
