@@ -37,6 +37,12 @@ Usage: goodbyedpi.exe [OPTION...]
                           DANGEROUS! May break websites in unexpected ways. Use with care.
  --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
                           May not work in a VM or with some routers, but is safer than set-ttl.
+ --native-frag            fragment (split) the packets by sending them in smaller packets, without
+                          shrinking the Window Size. Works faster (does not slow down the connection)
+                          and better.
+ --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the
+                          reversed order. Works with the websites which could not handle segmented
+                          HTTPS TLS ClientHello (because they receive the TCP flow "combined").
 
  -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)
  -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)
@@ -94,8 +100,8 @@ Modify them according to your own needs.
 # Known issues
 
 * Horribly outdated Windows 7 installations are not able to load WinDivert driver due to missing support for SHA256 digital signatures. Install KB3033929 [x86](https://www.microsoft.com/en-us/download/details.aspx?id=46078)/[x64](https://www.microsoft.com/en-us/download/details.aspx?id=46148), or better, update the whole system using Windows Update.
-* Some SSL/TLS stacks unable to process fragmented ClientHello packets, and HTTPS websites won't open. Bug: [#4](https://github.com/ValdikSS/GoodbyeDPI/issues/4), [#64](https://github.com/ValdikSS/GoodbyeDPI/issues/64).
-* ESET Antivirus is incompatible with WinDivert driver [#91](https://github.com/ValdikSS/GoodbyeDPI/issues/91). This is most probably antivirus bug, not WinDivert.
+* ~~Some SSL/TLS stacks unable to process fragmented ClientHello packets, and HTTPS websites won't open. Bug: [#4](https://github.com/ValdikSS/GoodbyeDPI/issues/4), [#64](https://github.com/ValdikSS/GoodbyeDPI/issues/64).~~ Fragmentation issues are fixed in v0.1.7.
+* ~~ESET Antivirus is incompatible with WinDivert driver [#91](https://github.com/ValdikSS/GoodbyeDPI/issues/91). This is most probably antivirus bug, not WinDivert.~~
 
 
 # Similar projects
