@@ -125,6 +125,7 @@ static struct option long_options[] = {
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
     {"wrong-chksum",no_argument,       0,  '%' },
+    {"native-frag", no_argument,       0,  '*' },
     {0,             0,                 0,   0  }
 };
 
@@ -353,6 +354,72 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
     return NULL;
 }
 
+/** Fragment and send the packet.
+ *
+ * This function cuts off the end of the packet (step=0) or
+ * the beginning of the packet (step=1) with fragment_size bytes.
+ */
+static PVOID send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
+                        char *packet, UINT packetLen, PVOID packet_data,
+                        UINT packet_dataLen, int packet_v4, int packet_v6,
+                        PWINDIVERT_IPHDR ppIpHdr, PWINDIVERT_IPV6HDR ppIpV6Hdr,
+                        PWINDIVERT_TCPHDR ppTcpHdr,
+                        int fragment_size, int step) {
+    char packet_bak[MAX_PACKET_SIZE];
+    memcpy(&packet_bak, packet, packetLen);
+    UINT orig_packetLen = packetLen;
+
+    if (step == 0) {
+        if (packet_v4)
+            ppIpHdr->Length = htons(
+                ntohs(ppIpHdr->Length) -
+                packet_dataLen + fragment_size
+            );
+        else if (packet_v6)
+            ppIpV6Hdr->Length = htons(
+                ntohs(ppIpV6Hdr->Length) -
+                packet_dataLen + fragment_size
+            );
+        //printf("step0 (%d:%d), pp:%d, was:%d, now:%d\n",
+        //                packet_v4, packet_v6, ntohs(ppIpHdr->Length),
+        //                packetLen, packetLen - packet_dataLen + fragment_size);
+        packetLen = packetLen - packet_dataLen + fragment_size;
+    }
+
+    else if (step == 1) {
+        if (packet_v4)
+            ppIpHdr->Length = htons(
+                ntohs(ppIpHdr->Length) - fragment_size
+            );
+        else if (packet_v6)
+            ppIpV6Hdr->Length = htons(
+                ntohs(ppIpV6Hdr->Length) - fragment_size
+            );
+        //printf("step1 (%d:%d), pp:%d, was:%d, now:%d\n", packet_v4, packet_v6, ntohs(ppIpHdr->Length),
+        //                packetLen, packetLen - fragment_size);
+        memmove(packet_data,
+                packet_data + fragment_size,
+                packet_dataLen - fragment_size);
+        packetLen -= fragment_size;
+
+        ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + fragment_size);
+    }
+
+    addr.PseudoIPChecksum = 0;
+    addr.PseudoTCPChecksum = 0;
+
+    WinDivertHelperCalcChecksums(
+        packet, packetLen, &addr, 0
+    );
+    WinDivertSend(
+        w_filter, packet,
+        packetLen,
+        &addr, NULL
+    );
+    memcpy(packet, &packet_bak, orig_packetLen);
+    //printf("Sent native fragment of %d size (step%d)\n", packetLen, step);
+}
+
 int main(int argc, char *argv[]) {
     static enum packet_type_e {
         unknown,
@@ -384,9 +451,11 @@ int main(int argc, char *argv[]) {
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_blacklist = 0,
         do_fake_packet = 0,
-        do_wrong_chksum = 0;
+        do_wrong_chksum = 0,
+        do_native_frag = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
+    unsigned int current_fragment_size = 0;
     BYTE ttl_of_fake_packet = 0;
     uint32_t dnsv4_addr = 0;
     struct in6_addr dnsv6_addr = {0};
@@ -487,10 +556,13 @@ int main(int argc, char *argv[]) {
                 break;
             case 'k':
                 do_fragment_http_persistent = 1;
+                do_native_frag = 1;
                 SET_HTTP_FRAGMENT_SIZE_OPTION(atousi(optarg, "Fragment size should be in range [0 - 0xFFFF]\n"));
                 break;
             case 'n':
+                do_fragment_http_persistent = 1;
                 do_fragment_http_persistent_nowait = 1;
+                do_native_frag = 1;
                 break;
             case 'e':
                 do_fragment_https = 1;
@@ -592,6 +664,17 @@ int main(int argc, char *argv[]) {
                 do_fake_packet = 1;
                 do_wrong_chksum = 1;
                 break;
+            case '*':
+                do_native_frag = 1;
+                do_fragment_http_persistent = 1;
+                do_fragment_http_persistent_nowait = 1;
+                break;
+            case '(':
+                do_reverse_frag = 1;
+                do_native_frag = 1;
+                do_fragment_http_persistent = 1;
+                do_fragment_http_persistent_nowait = 1;
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -618,7 +701,10 @@ int main(int argc, char *argv[]) {
                 "                          Could be combined with --wrong-chksum.\n"
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
                 "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
-                "                          Could be combined with --set-ttl\n."
+                "                          Could be combined with --set-ttl\n"
+                " --native-frag            fragment (split) the packets by sending them in smaller packets, without\n"
+                "                          shrinking the Window Size. Works faster (does not slow down the connection)\n"
+                "                          and better.\n"
                 "\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
@@ -634,13 +720,15 @@ int main(int argc, char *argv[]) {
         https_fragment_size = 2;
 
     printf("Block passive: %d\nFragment HTTP: %d\nFragment persistent HTTP: %d\n"
-           "Fragment HTTPS: %d\nhoSt: %d\nHost no space: %d\nAdditional space: %d\n"
+           "Fragment HTTPS: %d\nNative fragmentation (splitting): %d\n"
+           "hoSt: %d\nHost no space: %d\nAdditional space: %d\n"
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
            "DNS redirect: %d\nDNSv6 redirect: %d\n"
            "Fake requests, TTL: %hu\nFake requests, wrong checksum: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
+           do_native_frag,
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
            do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum
@@ -764,13 +852,17 @@ int main(int argc, char *argv[]) {
                         ((do_fragment_https ? packet_dataLen == https_fragment_size : 0) ||
                          packet_dataLen > 16) &&
                          ppTcpHdr->DstPort != htons(80) &&
-                         (do_fake_packet)
+                         (do_fake_packet || do_native_frag)
                         )
                 {
                     if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
                         if (do_fake_packet) {
                             send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                     ttl_of_fake_packet, do_wrong_chksum);
+                        }
+                        if (do_native_frag) {
+                            // Signal for native fragmentation code handler
+                            should_recalc_checksum = 1;
                         }
                     }
                 }
@@ -795,73 +887,14 @@ int main(int argc, char *argv[]) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 
+                        if (do_native_frag) {
+                            // Signal for native fragmentation code handler
+                            should_recalc_checksum = 1;
+                        }
+
                         if (do_fake_packet)
                             send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                    ttl_of_fake_packet, do_wrong_chksum);
-
-
-                        /*
-                         * Handle new HTTP request in new
-                         * connection (when Window Size modification disabled)
-                         * or already established connection (keep-alive).
-                         * We split HTTP request into two packets: one of http_fragment_size length
-                         * and another of original_size - http_fragment_size length.
-                         *
-                         * The second packet of a splitted part is not really needed to be sent
-                         * as Windows understand that is hasn't been sent by checking
-                         * ack number of received packet and retransmitting missing part again,
-                         * but it's better to send it anyway since it eliminates one RTT.
-                         */
-                        if (do_fragment_http_persistent && !http_req_fragmented &&
-                            (packet_dataLen > http_fragment_size))
-                        {
-                            if (packet_v4)
-                                ppIpHdr->Length = htons(
-                                    ntohs(ppIpHdr->Length) -
-                                    packet_dataLen + http_fragment_size
-                                );
-                            else if (packet_v6)
-                                ppIpV6Hdr->Length = htons(
-                                    ntohs(ppIpV6Hdr->Length) -
-                                    packet_dataLen + http_fragment_size
-                                );
-
-                            WinDivertHelperCalcChecksums(
-                                packet, packetLen - packet_dataLen + http_fragment_size, &addr, 0
-                            );
-                            WinDivertSend(
-                                w_filter, packet,
-                                packetLen - packet_dataLen + http_fragment_size,
-                                &addr, NULL
-                            );
-
-                            if (do_fragment_http_persistent_nowait) {
-                                if (packet_v4)
-                                    ppIpHdr->Length = htons(
-                                        ntohs(ppIpHdr->Length) -
-                                        http_fragment_size + packet_dataLen - http_fragment_size
-                                    );
-                                else if (packet_v6)
-                                    ppIpV6Hdr->Length = htons(
-                                        ntohs(ppIpV6Hdr->Length) -
-                                        http_fragment_size + packet_dataLen - http_fragment_size
-                                    );
-                                memmove(packet_data,
-                                        packet_data + http_fragment_size,
-                                        packet_dataLen);
-                                packet_dataLen -= http_fragment_size;
-                                packetLen -= http_fragment_size;
-                                hdr_value_addr -= http_fragment_size;
-                                hdr_name_addr -= http_fragment_size;
-                                host_addr = hdr_value_addr;
-
-                                ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + http_fragment_size);
-                                should_recalc_checksum = 1;
-                            }
-                            else {
-                                continue;
-                            }
-                        }
 
                         if (do_host_mixedcase) {
                             mix_case(host_addr, host_len);
@@ -939,13 +972,43 @@ int main(int argc, char *argv[]) {
                         } /* else if (do_host_removespace) */
                     } /* if (find_header_and_get_info http_host) */
                 } /* Handle OUTBOUND packet with data */
+
+                /*
+                * should_recalc_checksum mean we have detected a packet to handle and
+                * modified it in some way.
+                * Handle native fragmentation here, incl. sending the packet.
+                */
+                if (should_reinject && should_recalc_checksum && do_native_frag)
+                {
+                    current_fragment_size = 0;
+                    if (do_fragment_http && ppTcpHdr->DstPort == htons(80)) {
+                        current_fragment_size = http_fragment_size;
+                    }
+                    else if (do_fragment_https && ppTcpHdr->DstPort != htons(80)) {
+                        current_fragment_size = https_fragment_size;
+                    }
+
+                    if (current_fragment_size) {
+                        send_native_fragment(w_filter, addr, packet, packetLen, packet_data,
+                                            packet_dataLen,packet_v4, packet_v6,
+                                            ppIpHdr, ppIpV6Hdr, ppTcpHdr,
+                                            current_fragment_size, 0);
+
+                        send_native_fragment(w_filter, addr, packet, packetLen, packet_data,
+                                            packet_dataLen,packet_v4, packet_v6,
+                                            ppIpHdr, ppIpV6Hdr, ppTcpHdr,
+                                            current_fragment_size, 1);
+                        continue;
+                    }
+                }
             } /* Handle TCP packet with data */
 
             /* Else if we got TCP packet without data */
             else if (packet_type == ipv4_tcp || packet_type == ipv6_tcp) {
                 /* If we got INBOUND SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND &&
-                    ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
+                    ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1 &&
+                    !do_native_frag) {
                     //printf("Changing Window Size!\n");
                     /*
                      * Window Size is changed even if do_fragment_http_persistent
