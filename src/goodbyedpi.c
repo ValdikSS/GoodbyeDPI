@@ -383,6 +383,7 @@ int main(int argc, char *argv[]) {
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_blacklist = 0,
+        do_fake_packet = 0,
         do_wrong_chksum = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
@@ -584,9 +585,11 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case '$':
+                do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
                 break;
             case '%':
+                do_fake_packet = 1;
                 do_wrong_chksum = 1;
                 break;
             default:
@@ -761,12 +764,14 @@ int main(int argc, char *argv[]) {
                         ((do_fragment_https ? packet_dataLen == https_fragment_size : 0) ||
                          packet_dataLen > 16) &&
                          ppTcpHdr->DstPort != htons(80) &&
-                         (ttl_of_fake_packet || do_wrong_chksum)
+                         (do_fake_packet)
                         )
                 {
                     if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
-                        send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                ttl_of_fake_packet, do_wrong_chksum);
+                        if (do_fake_packet) {
+                            send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
+                                                    ttl_of_fake_packet, do_wrong_chksum);
+                        }
                     }
                 }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
@@ -777,7 +782,8 @@ int main(int argc, char *argv[]) {
                                              (do_fragment_http ? http_fragment_size : 0u),
                                              &http_req_fragmented) &&
                         (do_host || do_host_removespace ||
-                        do_host_mixedcase || do_fragment_http_persistent))
+                        do_host_mixedcase || do_fragment_http_persistent ||
+                        do_fake_packet))
                 {
 
                     /* Find Host header */
@@ -789,7 +795,7 @@ int main(int argc, char *argv[]) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 
-                        if (ttl_of_fake_packet || do_wrong_chksum)
+                        if (do_fake_packet)
                             send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                    ttl_of_fake_packet, do_wrong_chksum);
 
