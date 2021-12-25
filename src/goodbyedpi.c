@@ -826,7 +826,7 @@ int main(int argc, char *argv[]) {
            do_wrong_chksum, do_wrong_seq
           );
 
-    if (do_fragment_http && http_fragment_size > 2) {
+    if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
         printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
                "with other options. Please use values <= 2 or disable HTTP fragmentation "
                "completely.\n");
