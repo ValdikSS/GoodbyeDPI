@@ -127,6 +127,28 @@ static int send_fake_data(const HANDLE w_filter,
     return 0;
 }
 
+static int send_fake_request(const HANDLE w_filter,
+                                  const PWINDIVERT_ADDRESS addr,
+                                  const char *pkt,
+                                  const UINT packetLen,
+                                  const BOOL is_ipv6,
+                                  const BOOL is_https,
+                                  const BYTE set_ttl,
+                                  const BYTE set_checksum
+                                 ) {
+    if (set_ttl) {
+        send_fake_data(w_filter, addr, pkt, packetLen,
+                          is_ipv6, is_https,
+                          set_ttl, FALSE);
+    }
+    if (set_checksum) {
+        send_fake_data(w_filter, addr, pkt, packetLen,
+                          is_ipv6, is_https,
+                          FALSE, set_checksum);
+    }
+    return 0;
+}
+
 int send_fake_http_request(const HANDLE w_filter,
                                   const PWINDIVERT_ADDRESS addr,
                                   const char *pkt,
@@ -135,15 +157,9 @@ int send_fake_http_request(const HANDLE w_filter,
                                   const BYTE set_ttl,
                                   const BYTE set_checksum
                                  ) {
-    return send_fake_data(w_filter,
-                          addr,
-                          pkt,
-                          packetLen,
-                          is_ipv6,
-                          FALSE,
-                          set_ttl,
-                          set_checksum
-           );
+    return send_fake_request(w_filter, addr, pkt, packetLen,
+                          is_ipv6, FALSE,
+                          set_ttl, set_checksum);
 }
 
 int send_fake_https_request(const HANDLE w_filter,
@@ -154,13 +170,7 @@ int send_fake_https_request(const HANDLE w_filter,
                                    const BYTE set_ttl,
                                    const BYTE set_checksum
                                  ) {
-    return send_fake_data(w_filter,
-                          addr,
-                          pkt,
-                          packetLen,
-                          is_ipv6,
-                          TRUE,
-                          set_ttl,
-                          set_checksum
-           );
+    return send_fake_request(w_filter, addr, pkt, packetLen,
+                          is_ipv6, TRUE,
+                          set_ttl, set_checksum);
 }
