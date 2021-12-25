@@ -48,10 +48,16 @@ Usage: goodbyedpi.exe [OPTION...]
                           reversed order. Works with the websites which could not handle segmented
                           HTTPS TLS ClientHello (because they receive the TCP flow "combined").
 
- -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)
+
+LEGACY modesets:
+ -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)
  -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)
  -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)
  -4          -p -r -s (best speed)
+
+Modern modesets (more stable, more compatible, faster):
+ -5          -f 2 -e 2 --auto-ttl --reverse-frag (this is the default)
+ -6          -f 2 -e 2 --wrong-seq --reverse-frag
 ```
 
 To check if your ISP's DPI could be circumvented, run `3_all_dnsredir_hardcore.cmd` first. This is the most hardcore mode which will show if this program is suitable for your ISP and DPI vendor at all. If you can open blocked websites with this mode, it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.

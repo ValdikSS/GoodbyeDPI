@@ -572,15 +572,16 @@ int main(int argc, char *argv[]) {
     );
 
     if (argc == 1) {
-        /* enable mode -1 by default */
+        /* enable mode -5 by default */
+        do_fragment_http = do_fragment_https = 1;
+        do_reverse_frag = do_native_frag = 1;
         http_fragment_size = https_fragment_size = 2;
-        do_passivedpi = do_host = do_host_removespace \
-                = do_fragment_http = do_fragment_https \
-                = do_fragment_http_persistent \
-                = do_fragment_http_persistent_nowait = 1;
+        do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
+        do_fake_packet = 1;
+        do_auto_ttl = 2;
     }
 
-    while ((opt = getopt_long(argc, argv, "1234prsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -602,6 +603,22 @@ int main(int argc, char *argv[]) {
                 break;
             case '4':
                 do_passivedpi = do_host = do_host_removespace = 1;
+                break;
+            case '5':
+                do_fragment_http = do_fragment_https = 1;
+                do_reverse_frag = do_native_frag = 1;
+                http_fragment_size = https_fragment_size = 2;
+                do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
+                do_fake_packet = 1;
+                do_auto_ttl = 2;
+                break;
+            case '6':
+                do_fragment_http = do_fragment_https = 1;
+                do_reverse_frag = do_native_frag = 1;
+                http_fragment_size = https_fragment_size = 2;
+                do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
+                do_fake_packet = 1;
+                do_wrong_seq = 1;
                 break;
             case 'p':
                 do_passivedpi = 1;
@@ -795,10 +812,16 @@ int main(int argc, char *argv[]) {
                 "                          reversed order. Works with the websites which could not handle segmented\n"
                 "                          HTTPS TLS ClientHello (because they receive the TCP flow \"combined\").\n"
                 "\n"
-                " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode, default)\n"
+                "\n"
+                "LEGACY modesets:\n"
+                " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
                 " -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)\n"
-                " -4          -p -r -s (best speed)");
+                " -4          -p -r -s (best speed)"
+                "\n"
+                "Modern modesets (more stable, more compatible, faster):\n"
+                " -5          -f 2 -e 2 --auto-ttl --reverse-frag (this is the default)\n"
+                " -6          -f 2 -e 2 --wrong-seq --reverse-frag\n");
                 exit(EXIT_FAILURE);
         }
     }
