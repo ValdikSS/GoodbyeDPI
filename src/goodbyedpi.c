@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
         http_fragment_size = https_fragment_size = 2;
         do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
         do_fake_packet = 1;
-        do_auto_ttl = 2;
+        do_auto_ttl = 4;
     }
 
     while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
@@ -610,7 +610,7 @@ int main(int argc, char *argv[]) {
                 http_fragment_size = https_fragment_size = 2;
                 do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
                 do_fake_packet = 1;
-                do_auto_ttl = 2;
+                do_auto_ttl = 4;
                 break;
             case '6':
                 do_fragment_http = do_fragment_https = 1;
@@ -749,7 +749,7 @@ int main(int argc, char *argv[]) {
                 break;
             case '+':
                 do_fake_packet = 1;
-                do_auto_ttl = 2;
+                do_auto_ttl = 4;
                 if (optarg) {
                     do_auto_ttl = atoub(optarg, "Set Auto TTL parameter error!");
                 } else if (argv[optind] && argv[optind][0] != '-') {
@@ -800,7 +800,7 @@ int main(int argc, char *argv[]) {
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
                 " --auto-ttl    [decttl]   activate Fake Request Mode, automatically detect TTL and decrease\n"
-                "                          it from standard 64 or 128 by decttl (128/64 - TTL - 2 by default).\n"
+                "                          it from standard 64 or 128 by decttl (128/64 - TTL - 4 by default).\n"
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
                 "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
                 "                          Could be combined with --set-ttl\n"

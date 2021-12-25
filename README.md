@@ -37,7 +37,7 @@ Usage: goodbyedpi.exe [OPTION...]
  --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.
                           DANGEROUS! May break websites in unexpected ways. Use with care.
  --auto-ttl    [decttl]   activate Fake Request Mode, automatically detect TTL and decrease
-                          it from standard 64 or 128 by decttl (128/64 - TTL - 2 by default).
+                          it from standard 64 or 128 by decttl (128/64 - TTL - 4 by default).
  --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
                           May not work in a VM or with some routers, but is safer than set-ttl.
  --wrong-seq              activate Fake Request Mode and send it with TCP SEQ/ACK in the past.
