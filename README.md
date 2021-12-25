@@ -17,27 +17,30 @@ Usage: goodbyedpi.exe [OPTION...]
  -r          replace Host with hoSt
  -s          remove space between host header and its value
  -m          mix Host header case (test.com -> tEsT.cOm)
- -f [value]  set HTTP fragmentation to value
- -k [value]  enable HTTP persistent (keep-alive) fragmentation and set it to value
+ -f <value>  set HTTP fragmentation to value
+ -k <value>  enable HTTP persistent (keep-alive) fragmentation and set it to value
  -n          do not wait for first segment ACK when -k is enabled
- -e [value]  set HTTPS fragmentation to value
+ -e <value>  set HTTPS fragmentation to value
  -a          additional space between Method and Request-URI (enables -s, may break sites)
  -w          try to find and parse HTTP traffic on all processed ports (not only on port 80)
- --port        [value]    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
- --ip-id       [value]    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).
+ --port        <value>    additional TCP port to perform fragmentation on (and HTTP tricks with -w)
+ --ip-id       <value>    handle additional IP ID (decimal, drop redirects and TCP RSTs with this ID).
                           This option can be supplied multiple times.
- --dns-addr    [value]    redirect UDP DNS requests to the supplied IP address (experimental)
- --dns-port    [value]    redirect UDP DNS requests to the supplied port (53 by default)
- --dnsv6-addr  [value]    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)
- --dnsv6-port  [value]    redirect UDPv6 DNS requests to the supplied port (53 by default)
+ --dns-addr    <value>    redirect UDP DNS requests to the supplied IP address (experimental)
+ --dns-port    <value>    redirect UDP DNS requests to the supplied port (53 by default)
+ --dnsv6-addr  <value>    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)
+ --dnsv6-port  <value>    redirect UDPv6 DNS requests to the supplied port (53 by default)
  --dns-verb               print verbose DNS redirection messages
- --blacklist   [txtfile]  perform circumvention tricks only to host names and subdomains from
+ --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from
                           supplied text file (HTTP Host/TLS SNI).
                           This option can be supplied multiple times.
- --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.
+ --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.
                           DANGEROUS! May break websites in unexpected ways. Use with care.
+ --auto-ttl    [decttl]   activate Fake Request Mode, automatically detect TTL and decrease
+                          it from standard 64 or 128 by decttl (128/64 - TTL - 2 by default).
  --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
                           May not work in a VM or with some routers, but is safer than set-ttl.
+ --wrong-seq              activate Fake Request Mode and send it with TCP SEQ/ACK in the past.
  --native-frag            fragment (split) the packets by sending them in smaller packets, without
                           shrinking the Window Size. Works faster (does not slow down the connection)
                           and better.

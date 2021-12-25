@@ -1,3 +1,5 @@
+#ifndef _DNSREDIR_H
+#define _DNSREDIR_H
 #include <stdint.h>
 
 typedef struct conntrack_info {
@@ -34,3 +36,4 @@ int dns_handle_outgoing(const uint32_t srcip[4], const uint16_t srcport,
 
 void flush_dns_cache();
 int dns_is_dns_packet(const char *packet_data, const UINT packet_dataLen, const int outgoing);
+#endif

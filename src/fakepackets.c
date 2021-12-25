@@ -53,7 +53,8 @@ static int send_fake_data(const HANDLE w_filter,
                           const BOOL is_ipv6,
                           const BOOL is_https,
                           const BYTE set_ttl,
-                          const BYTE set_checksum
+                          const BYTE set_checksum,
+                          const BYTE set_seq
                          ) {
     char packet_fake[MAX_PACKET_SIZE];
     WINDIVERT_ADDRESS addr_new;
@@ -68,6 +69,9 @@ static int send_fake_data(const HANDLE w_filter,
 
     memcpy(&addr_new, addr, sizeof(WINDIVERT_ADDRESS));
     memcpy(packet_fake, pkt, packetLen);
+
+    addr_new.PseudoTCPChecksum = 0;
+    addr_new.PseudoIPChecksum = 0;
 
     if (!is_ipv6) {
         // IPv4 TCP Data packet
@@ -107,8 +111,15 @@ static int send_fake_data(const HANDLE w_filter,
             ppIpV6Hdr->HopLimit = set_ttl;
     }
 
+    if (set_seq) {
+        // This is the smallest ACK drift Linux can't handle already, since at least v2.6.18.
+        // https://github.com/torvalds/linux/blob/v2.6.18/net/netfilter/nf_conntrack_proto_tcp.c#L395
+        ppTcpHdr->AckNum = htonl(ntohl(ppTcpHdr->AckNum) - 66000);
+        // This is just random, no specifics about this value.
+        ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) - 10000);
+    }
+
     // Recalculate the checksum
-    addr_new.PseudoTCPChecksum = 0;
     WinDivertHelperCalcChecksums(packet_fake, packetLen_new, &addr_new, NULL);
 
     if (set_checksum) {
@@ -127,23 +138,46 @@ static int send_fake_data(const HANDLE w_filter,
     return 0;
 }
 
+static int send_fake_request(const HANDLE w_filter,
+                                  const PWINDIVERT_ADDRESS addr,
+                                  const char *pkt,
+                                  const UINT packetLen,
+                                  const BOOL is_ipv6,
+                                  const BOOL is_https,
+                                  const BYTE set_ttl,
+                                  const BYTE set_checksum,
+                                  const BYTE set_seq
+                                 ) {
+    if (set_ttl) {
+        send_fake_data(w_filter, addr, pkt, packetLen,
+                          is_ipv6, is_https,
+                          set_ttl, FALSE, FALSE);
+    }
+    if (set_checksum) {
+        send_fake_data(w_filter, addr, pkt, packetLen,
+                          is_ipv6, is_https,
+                          FALSE, set_checksum, FALSE);
+    }
+    if (set_seq) {
+        send_fake_data(w_filter, addr, pkt, packetLen,
+                          is_ipv6, is_https,
+                          FALSE, FALSE, set_seq);
+    }
+    return 0;
+}
+
 int send_fake_http_request(const HANDLE w_filter,
                                   const PWINDIVERT_ADDRESS addr,
                                   const char *pkt,
                                   const UINT packetLen,
                                   const BOOL is_ipv6,
                                   const BYTE set_ttl,
-                                  const BYTE set_checksum
+                                  const BYTE set_checksum,
+                                  const BYTE set_seq
                                  ) {
-    return send_fake_data(w_filter,
-                          addr,
-                          pkt,
-                          packetLen,
-                          is_ipv6,
-                          FALSE,
-                          set_ttl,
-                          set_checksum
-           );
+    return send_fake_request(w_filter, addr, pkt, packetLen,
+                          is_ipv6, FALSE,
+                          set_ttl, set_checksum, set_seq);
 }
 
 int send_fake_https_request(const HANDLE w_filter,
@@ -152,15 +186,10 @@ int send_fake_https_request(const HANDLE w_filter,
                                    const UINT packetLen,
                                    const BOOL is_ipv6,
                                    const BYTE set_ttl,
-                                   const BYTE set_checksum
+                                   const BYTE set_checksum,
+                                   const BYTE set_seq
                                  ) {
-    return send_fake_data(w_filter,
-                          addr,
-                          pkt,
-                          packetLen,
-                          is_ipv6,
-                          TRUE,
-                          set_ttl,
-                          set_checksum
-           );
+    return send_fake_request(w_filter, addr, pkt, packetLen,
+                          is_ipv6, TRUE,
+                          set_ttl, set_checksum, set_seq);
 }
