@@ -125,6 +125,7 @@ static struct option long_options[] = {
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
     {"wrong-chksum",no_argument,       0,  '%' },
+    {"wrong-seq",   no_argument,       0,  ')' },
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {0,             0,                 0,   0  }
@@ -453,6 +454,7 @@ int main(int argc, char *argv[]) {
         do_dns_verb = 0, do_blacklist = 0,
         do_fake_packet = 0,
         do_wrong_chksum = 0,
+        do_wrong_seq = 0,
         do_native_frag = 0, do_reverse_frag = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
@@ -665,6 +667,10 @@ int main(int argc, char *argv[]) {
                 do_fake_packet = 1;
                 do_wrong_chksum = 1;
                 break;
+            case ')':
+                do_fake_packet = 1;
+                do_wrong_seq = 1;
+                break;
             case '*':
                 do_native_frag = 1;
                 do_fragment_http_persistent = 1;
@@ -703,6 +709,7 @@ int main(int argc, char *argv[]) {
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
                 "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
                 "                          Could be combined with --set-ttl\n"
+                " --wrong-seq              activate Fake Request Mode and send it with TCP SEQ/ACK in the past.\n"
                 " --native-frag            fragment (split) the packets by sending them in smaller packets, without\n"
                 "                          shrinking the Window Size. Works faster (does not slow down the connection)\n"
                 "                          and better.\n"
@@ -730,13 +737,15 @@ int main(int argc, char *argv[]) {
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
            "DNS redirect: %d\nDNSv6 redirect: %d\n"
            "Fake requests, TTL: %hu\nFake requests, wrong checksum: %d\n",
+           "Fake requests, wrong SEQ/ACK: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
            (do_fragment_https ? https_fragment_size : 0),
            do_native_frag, do_reverse_frag,
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
-           do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum
+           do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum,
+           do_wrong_seq
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -863,7 +872,7 @@ int main(int argc, char *argv[]) {
                     if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
                         if (do_fake_packet) {
                             send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                    ttl_of_fake_packet, do_wrong_chksum);
+                                                    ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
                         }
                         if (do_native_frag) {
                             // Signal for native fragmentation code handler
@@ -899,7 +908,8 @@ int main(int argc, char *argv[]) {
 
                         if (do_fake_packet)
                             send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                   ttl_of_fake_packet, do_wrong_chksum);
+                                                   ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
+                        }
 
                         if (do_host_mixedcase) {
                             mix_case(host_addr, host_len);
