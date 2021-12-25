@@ -16,6 +16,7 @@
 #include "utils/repl_str.h"
 #include "service.h"
 #include "dnsredir.h"
+#include "ttltrack.h"
 #include "blackwhitelist.h"
 #include "fakepackets.h"
 
@@ -94,6 +95,22 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
     } \
 } while (0)
 
+#define TCP_HANDLE_OUTGOING_ADJUST_TTL() do { \
+    if ((packet_v4 && tcp_handle_outgoing(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr, \
+                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
+                        &tcp_conn_info, 0)) \
+        || \
+        (packet_v6 && tcp_handle_outgoing(ppIpV6Hdr->SrcAddr, ppIpV6Hdr->DstAddr, \
+                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
+                        &tcp_conn_info, 1))) \
+    { \
+        ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, do_auto_ttl); \
+        if (do_tcp_verb) { \
+            printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
+        } \
+    } \
+} while (0)
+
 static int running_from_service = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
@@ -124,6 +141,7 @@ static struct option long_options[] = {
     {"blacklist",   required_argument, 0,  'b' },
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
+    {"auto-ttl",    optional_argument, 0,  '+' },
     {"wrong-chksum",no_argument,       0,  '%' },
     {"wrong-seq",   no_argument,       0,  ')' },
     {"native-frag", no_argument,       0,  '*' },
@@ -442,6 +460,7 @@ int main(int argc, char *argv[]) {
     PWINDIVERT_TCPHDR ppTcpHdr;
     PWINDIVERT_UDPHDR ppUdpHdr;
     conntrack_info_t dns_conn_info;
+    tcp_conntrack_info_t tcp_conn_info;
 
     int do_passivedpi = 0, do_fragment_http = 0,
         do_fragment_http_persistent = 0,
@@ -451,8 +470,9 @@ int main(int argc, char *argv[]) {
         do_http_allports = 0,
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
-        do_dns_verb = 0, do_blacklist = 0,
+        do_dns_verb = 0, do_tcp_verb = 0, do_blacklist = 0,
         do_fake_packet = 0,
+        do_auto_ttl = 0,
         do_wrong_chksum = 0,
         do_wrong_seq = 0,
         do_native_frag = 0, do_reverse_frag = 0;
@@ -651,6 +671,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 'v':
                 do_dns_verb = 1;
+                do_tcp_verb = 1;
                 break;
             case 'b':
                 do_blacklist = 1;
@@ -662,6 +683,15 @@ int main(int argc, char *argv[]) {
             case '$':
                 do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
+                break;
+            case '+':
+                do_fake_packet = 1;
+                do_auto_ttl = 2;
+                if (optarg) {
+                    do_auto_ttl = atoub(optarg, "Set Auto TTL parameter error!");
+                } else if (argv[optind] && argv[optind][0] != '-') {
+                    do_auto_ttl = atoub(argv[optind], "Set Auto TTL parameter error!");
+                }
                 break;
             case '%':
                 do_fake_packet = 1;
@@ -705,7 +735,8 @@ int main(int argc, char *argv[]) {
                 "                          supplied text file. This option can be supplied multiple times.\n"
                 " --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
-                "                          Could be combined with --wrong-chksum.\n"
+                " --auto-ttl    [decttl]   activate Fake Request Mode, automatically detect TTL and decrease\n"
+                "                          it from standard 64 or 128 by decttl (128/64 - TTL - 2 by default).\n"
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
                 "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
                 "                          Could be combined with --set-ttl\n"
@@ -736,7 +767,7 @@ int main(int argc, char *argv[]) {
            "hoSt: %d\nHost no space: %d\nAdditional space: %d\n"
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
            "DNS redirect: %d\nDNSv6 redirect: %d\n"
-           "Fake requests, TTL: %hu\nFake requests, wrong checksum: %d\n",
+           "Fake requests, TTL: %hu (auto: %hu)\nFake requests, wrong checksum: %d\n"
            "Fake requests, wrong SEQ/ACK: %d\n",
            do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
            (do_fragment_http_persistent ? http_fragment_size : 0),
@@ -744,8 +775,8 @@ int main(int argc, char *argv[]) {
            do_native_frag, do_reverse_frag,
            do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
            do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
-           do_dnsv6_redirect, ttl_of_fake_packet, do_wrong_chksum,
-           do_wrong_seq
+           do_dnsv6_redirect, ttl_of_fake_packet, do_auto_ttl,
+           do_wrong_chksum, do_wrong_seq
           );
 
     if (do_fragment_http && http_fragment_size > 2) {
@@ -871,6 +902,9 @@ int main(int argc, char *argv[]) {
                 {
                     if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
                         if (do_fake_packet) {
+                            if (do_auto_ttl) {
+                                TCP_HANDLE_OUTGOING_ADJUST_TTL();
+                            }
                             send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                     ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
                         }
@@ -906,7 +940,10 @@ int main(int argc, char *argv[]) {
                             should_recalc_checksum = 1;
                         }
 
-                        if (do_fake_packet)
+                        if (do_fake_packet) {
+                            if (do_auto_ttl) {
+                                TCP_HANDLE_OUTGOING_ADJUST_TTL();
+                            }
                             send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                    ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
                         }
@@ -1022,20 +1059,36 @@ int main(int argc, char *argv[]) {
             else if (packet_type == ipv4_tcp || packet_type == ipv6_tcp) {
                 /* If we got INBOUND SYN+ACK packet */
                 if (addr.Direction == WINDIVERT_DIRECTION_INBOUND &&
-                    ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1 &&
-                    !do_native_frag) {
+                    ppTcpHdr->Syn == 1 && ppTcpHdr->Ack == 1) {
                     //printf("Changing Window Size!\n");
                     /*
                      * Window Size is changed even if do_fragment_http_persistent
                      * is enabled as there could be non-HTTP data on port 80
                      */
-                    if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
-                        change_window_size(ppTcpHdr, http_fragment_size);
-                        should_recalc_checksum = 1;
+
+                    if (do_fake_packet && do_auto_ttl) {
+                        if (!((packet_v4 && tcp_handle_incoming(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr,
+                                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
+                                        0, ppIpHdr->TTL))
+                            ||
+                            (packet_v6 && tcp_handle_incoming(&ppIpV6Hdr->SrcAddr, &ppIpV6Hdr->DstAddr,
+                                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
+                                        1, ppIpV6Hdr->HopLimit))))
+                        {
+                            if (do_tcp_verb)
+                                puts("[TCP WARN] Can't add TCP connection record.");
+                        }
                     }
-                    else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
-                        change_window_size(ppTcpHdr, https_fragment_size);
-                        should_recalc_checksum = 1;
+
+                    if (!do_native_frag) {
+                        if (do_fragment_http && ppTcpHdr->SrcPort == htons(80)) {
+                            change_window_size(ppTcpHdr, http_fragment_size);
+                            should_recalc_checksum = 1;
+                        }
+                        else if (do_fragment_https && ppTcpHdr->SrcPort != htons(80)) {
+                            change_window_size(ppTcpHdr, https_fragment_size);
+                            should_recalc_checksum = 1;
+                        }
                     }
                 }
             }
