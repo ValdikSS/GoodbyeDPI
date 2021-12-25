@@ -326,6 +326,52 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
     return FALSE;
 }
 
+/**
+ * Very crude Sever Name Indication (TLS ClientHello hostname) extractor.
+ */
+static int extract_sni(const char *pktdata, unsigned int pktlen,
+                    char **hostnameaddr, unsigned int *hostnamelen) {
+    uint32_t ptr = 0;
+    const char *d = pktdata;
+    const char *hnaddr = 0;
+    unsigned int hnlen = 0;
+
+    while (ptr + 8 < pktlen) {
+        /* Search for specific Extensions sequence */
+        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
+            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
+            /* Check Extension length, Server Name list length
+            *  and Server Name length relations
+            */
+            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
+            {
+                if (ptr + 8 + d[ptr+8] > pktlen) {
+                    return FALSE;
+                }
+                hnaddr = &d[ptr+9];
+                hnlen = d[ptr+8];
+                /* Limit hostname size up to 254 bytes */
+                if (hnlen < 2 || hnlen > 254) {
+                    return FALSE;
+                }
+                /* Validate that hostname has only ascii lowercase characters */
+                for (int i=0; i<hnlen; i++) {
+                    if (!(hnaddr[i] >= '1' && hnaddr[i] <= '9' ||
+                        hnaddr[i] >= 'a' && hnaddr[i] <= 'z' ||
+                        hnaddr[i] == '.'))
+                    {
+                        return FALSE;
+                    }
+                }
+                *hostnameaddr = hnaddr;
+                *hostnamelen = hnlen;
+                return TRUE;
+            }
+        ptr++;
+    }
+    return FALSE;
+}
+
 static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
     if (size >= 1 && size <= 0xFFFFu) {
         ppTcpHdr->Window = htons((u_short)size);
