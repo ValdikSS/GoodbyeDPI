@@ -914,6 +914,13 @@ int main(int argc, char *argv[]) {
                               blackwhitelist_check_hostname(host_addr, host_len))
                             : 1)
                         {
+#ifdef DEBUG
+                            unsigned char lsni[256] = {0};
+                            extract_sni(packet_data, packet_dataLen,
+                                        &host_addr, &host_len);
+                            memcpy(&lsni, host_addr, host_len);
+                            printf("Blocked HTTPS website SNI: %s\n", lsni);
+#endif
                             if (do_fake_packet) {
                                 send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
                                                         ttl_of_fake_packet, do_wrong_chksum);
@@ -945,6 +952,11 @@ int main(int argc, char *argv[]) {
                     {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
+#ifdef DEBUG
+                        unsigned char lhost[256] = {0};
+                        memcpy(&lhost, host_addr, host_len);
+                        printf("Blocked HTTP website Host: %s\n", lhost);
+#endif
 
                         if (do_native_frag) {
                             // Signal for native fragmentation code handler
