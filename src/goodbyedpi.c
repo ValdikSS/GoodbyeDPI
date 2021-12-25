@@ -741,8 +741,9 @@ int main(int argc, char *argv[]) {
                 " --dnsv6-addr  [value]    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)\n"
                 " --dnsv6-port  [value]    redirect UDPv6 DNS requests to the supplied port (53 by default)\n"
                 " --dns-verb               print verbose DNS redirection messages\n"
-                " --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from\n"
-                "                          supplied text file. This option can be supplied multiple times.\n"
+                " --blacklist   [txtfile]  perform circumvention tricks only to host names and subdomains from\n"
+                "                          supplied text file (HTTP Host/TLS SNI).\n"
+                "                          This option can be supplied multiple times.\n"
                 " --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
                 "                          Could be combined with --wrong-chksum.\n"
@@ -907,13 +908,20 @@ int main(int argc, char *argv[]) {
                         )
                 {
                     if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
-                        if (do_fake_packet) {
-                            send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                    ttl_of_fake_packet, do_wrong_chksum);
-                        }
-                        if (do_native_frag) {
-                            // Signal for native fragmentation code handler
-                            should_recalc_checksum = 1;
+                        if (do_blacklist
+                            ? (extract_sni(packet_data, packet_dataLen,
+                                        &host_addr, &host_len) &&
+                              blackwhitelist_check_hostname(host_addr, host_len))
+                            : 1)
+                        {
+                            if (do_fake_packet) {
+                                send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
+                                                        ttl_of_fake_packet, do_wrong_chksum);
+                            }
+                            if (do_native_frag) {
+                                // Signal for native fragmentation code handler
+                                should_recalc_checksum = 1;
+                            }
                         }
                     }
                 }

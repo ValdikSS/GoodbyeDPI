@@ -31,8 +31,9 @@ Usage: goodbyedpi.exe [OPTION...]
  --dnsv6-addr  [value]    redirect UDPv6 DNS requests to the supplied IPv6 address (experimental)
  --dnsv6-port  [value]    redirect UDPv6 DNS requests to the supplied port (53 by default)
  --dns-verb               print verbose DNS redirection messages
- --blacklist   [txtfile]  perform HTTP tricks only to host names and subdomains from
-                          supplied text file. This option can be supplied multiple times.
+ --blacklist   [txtfile]  perform circumvention tricks only to host names and subdomains from
+                          supplied text file (HTTP Host/TLS SNI).
+                          This option can be supplied multiple times.
  --set-ttl     [value]    activate Fake Request Mode and send it with supplied TTL value.
                           DANGEROUS! May break websites in unexpected ways. Use with care.
  --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
