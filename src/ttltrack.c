@@ -222,10 +222,16 @@ int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t decrease_for) {
     uint8_t ttl_of_fake_packet = 0;
 
     if (ttl > 64 && ttl < 128) {
-        ttl_of_fake_packet = 128 - ttl - decrease_for;
+        /* Safekeeping */
+        if (128 - ttl > decrease_for + 1) {
+            ttl_of_fake_packet = 128 - ttl - decrease_for;
+        }
     }
     else if (ttl > 34 && ttl < 64) {
-        ttl_of_fake_packet = 64 - ttl - decrease_for;
+        /* Safekeeping */
+        if (64 - ttl > decrease_for + 1) {
+            ttl_of_fake_packet = 64 - ttl - decrease_for;
+        }
     }
     else {
         ttl_of_fake_packet = 0;
