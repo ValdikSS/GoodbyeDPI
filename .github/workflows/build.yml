@@ -1,0 +1,73 @@
+name: Build GoodbyeDPI
+
+on:
+  push
+
+env:
+  WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-1.4.3-A.zip
+  WINDIVERT_NAME: WinDivert-1.4.3-A.zip
+  WINDIVERT_SHA256: 4084bc3931f31546d375ed89e3f842776efa46f321ed0adcd32d3972a7d02566
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Declare short commit variable
+        id: vars
+        run: |
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Install MinGW-w64
+        run: >
+          sudo DEBIAN_FRONTEND=noninteractive XZ_DEFAULTS="-T0" XZ_OPT="-T0" eatmydata
+          apt install -y --no-install-recommends gcc-mingw-w64
+
+      - name: Download WinDivert from cache
+        id: windivert-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env. WINDIVERT_NAME }}
+          key: ${{ env. WINDIVERT_SHA256 }}
+
+      - name: Download WinDivert from the website
+        if: steps.windivert-cache.outputs.cache-hit != 'true'
+        run: >
+          wget ${{ env. WINDIVERT_URL }} &&
+          (echo ${{ env. WINDIVERT_SHA256 }} ${{ env. WINDIVERT_NAME }} | sha256sum -c)
+
+      - name: Unpack WinDivert
+        run: unzip ${{ env. WINDIVERT_NAME }}
+
+      - name: Compile x86_64
+        run: >
+          cd src && make clean &&
+          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../WinDivert-1.4.3-A/include WINDIVERTLIBS=../WinDivert-1.4.3-A/x86_64 -j4
+      
+      - name: Prepare x86_64 directory
+        run: |
+          mkdir goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
+          cp src/goodbyedpi.exe WinDivert-1.4.3-A/x86_64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
+
+      - name: Upload output file x86_64 (64 bit)
+        uses: actions/upload-artifact@v2
+        with:
+          name: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
+          path: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
+
+      - name: Compile i686
+        run: >
+          cd src && make clean &&
+          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../WinDivert-1.4.3-A/include WINDIVERTLIBS=../WinDivert-1.4.3-A/x86 -j4
+
+      - name: Prepare x86 directory
+        run: |
+          mkdir goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
+          cp src/goodbyedpi.exe WinDivert-1.4.3-A/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
+
+      - name: Upload output file x86
+        uses: actions/upload-artifact@v2
+        with:
+          name: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
+          path: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
