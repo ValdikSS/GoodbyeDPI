@@ -165,9 +165,9 @@ static void add_filter_str(int proto, int port) {
 
     strcpy(new_filter, current_filter);
     if (proto == IPPROTO_UDP)
-        sprintf(&(new_filter[strlen(new_filter)]), udp, port, port);
+        sprintf(new_filter + strlen(new_filter), udp, port, port);
     else
-        sprintf(&(new_filter[strlen(new_filter)]), tcp, port, port);
+        sprintf(new_filter + strlen(new_filter), tcp, port, port);
 
     filter_string = new_filter;
     free(current_filter);
@@ -327,18 +327,18 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
     hdr_begin = dumb_memmem(pktdata, pktlen,
                 hdrname, strlen(hdrname));
     if (!hdr_begin) return FALSE;
-    if ((PVOID)pktdata > (PVOID)hdr_begin) return FALSE;
+    if (pktdata > hdr_begin) return FALSE;
 
     /* Set header address */
     *hdrnameaddr = hdr_begin;
-    *hdrvalueaddr = (PVOID)hdr_begin + strlen(hdrname);
+    *hdrvalueaddr = hdr_begin + strlen(hdrname);
 
     /* Search for header end (\r\n) */
     data_addr_rn = dumb_memmem(*hdrvalueaddr,
-                        pktlen - ((PVOID)*hdrvalueaddr - (PVOID)pktdata),
+                        pktlen - (*hdrvalueaddr - pktdata),
                         "\r\n", 2);
     if (data_addr_rn) {
-        *hdrvaluelen = (PVOID)data_addr_rn - (PVOID)*hdrvalueaddr;
+        *hdrvaluelen = data_addr_rn - *hdrvalueaddr;
         if (*hdrvaluelen > 0u && *hdrvaluelen <= 512u)
             return TRUE;
     }
@@ -351,8 +351,8 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
     uint32_t ptr = 0;
-    const char *d = pktdata;
-    const char *hnaddr = 0;
+    unsigned char *d = (unsigned char*)pktdata;
+    unsigned char *hnaddr = 0;
     unsigned int hnlen = 0;
 
     while (ptr + 8 < pktlen) {
@@ -374,15 +374,15 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
                     return FALSE;
                 }
                 /* Validate that hostname has only ascii lowercase characters */
-                for (int i=0; i<hnlen; i++) {
-                    if (!(hnaddr[i] >= '1' && hnaddr[i] <= '9' ||
-                        hnaddr[i] >= 'a' && hnaddr[i] <= 'z' ||
-                        hnaddr[i] == '.'))
+                for (unsigned int i=0; i<hnlen; i++) {
+                    if (!( (hnaddr[i] >= '1' && hnaddr[i] <= '9') ||
+                         (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
+                         hnaddr[i] == '.'))
                     {
                         return FALSE;
                     }
                 }
-                *hostnameaddr = hnaddr;
+                *hostnameaddr = (char*)hnaddr;
                 *hostnamelen = hnlen;
                 return TRUE;
             }
@@ -425,12 +425,12 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
  * This function cuts off the end of the packet (step=0) or
  * the beginning of the packet (step=1) with fragment_size bytes.
  */
-static PVOID send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
+static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
                         char *packet, UINT packetLen, PVOID packet_data,
                         UINT packet_dataLen, int packet_v4, int packet_v6,
                         PWINDIVERT_IPHDR ppIpHdr, PWINDIVERT_IPV6HDR ppIpV6Hdr,
                         PWINDIVERT_TCPHDR ppTcpHdr,
-                        int fragment_size, int step) {
+                        unsigned int fragment_size, int step) {
     char packet_bak[MAX_PACKET_SIZE];
     memcpy(&packet_bak, packet, packetLen);
     UINT orig_packetLen = packetLen;
@@ -464,7 +464,7 @@ static PVOID send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
         //printf("step1 (%d:%d), pp:%d, was:%d, now:%d\n", packet_v4, packet_v6, ntohs(ppIpHdr->Length),
         //                packetLen, packetLen - fragment_size);
         memmove(packet_data,
-                packet_data + fragment_size,
+                (char*)packet_data + fragment_size,
                 packet_dataLen - fragment_size);
         packetLen -= fragment_size;
 
@@ -1059,7 +1059,7 @@ int main(int argc, char *argv[]) {
 
                             if (method_addr) {
                                 memmove(method_addr + 1, method_addr,
-                                        (PVOID)host_addr - (PVOID)method_addr - 1);
+                                        (size_t)(host_addr - method_addr - 1));
                                 should_recalc_checksum = 1;
                             }
                         }
@@ -1087,10 +1087,10 @@ int main(int argc, char *argv[]) {
                                         * to the end of User-Agent
                                         */
                                         memmove(host_addr - 1, host_addr,
-                                                (PVOID)useragent_addr + useragent_len - (PVOID)host_addr);
+                                                (size_t)(useragent_addr + useragent_len - host_addr));
                                         host_addr -= 1;
                                         /* Put space in the end of User-Agent header */
-                                        *(char*)((PVOID)useragent_addr + useragent_len - 1) = ' ';
+                                        *(char*)((uint8_t*)useragent_addr + useragent_len - 1) = ' ';
                                         should_recalc_checksum = 1;
                                         //printf("Replaced Host header!\n");
                                     }
@@ -1100,11 +1100,11 @@ int main(int argc, char *argv[]) {
                                         /* Move one byte to the RIGHT from the end of User-Agent
                                         * to the "Host:"
                                         */
-                                        memmove((PVOID)useragent_addr + useragent_len + 1,
-                                                (PVOID)useragent_addr + useragent_len,
-                                                (PVOID)host_addr - 1 - ((PVOID)useragent_addr + useragent_len));
+                                        memmove(useragent_addr + useragent_len + 1,
+                                                useragent_addr + useragent_len,
+                                                (size_t)(host_addr - 1 - (useragent_addr + useragent_len)));
                                         /* Put space in the end of User-Agent header */
-                                        *(char*)((PVOID)useragent_addr + useragent_len) = ' ';
+                                        *(char*)((uint8_t*)useragent_addr + useragent_len) = ' ';
                                         should_recalc_checksum = 1;
                                         //printf("Replaced Host header!\n");
                                     }
@@ -1160,7 +1160,8 @@ int main(int argc, char *argv[]) {
                                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
                                         0, ppIpHdr->TTL))
                             ||
-                            (packet_v6 && tcp_handle_incoming(&ppIpV6Hdr->SrcAddr, &ppIpV6Hdr->DstAddr,
+                            (packet_v6 && tcp_handle_incoming((uint32_t*)&ppIpV6Hdr->SrcAddr,
+                                        (uint32_t*)&ppIpV6Hdr->DstAddr,
                                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
                                         1, ppIpV6Hdr->HopLimit))))
                         {
@@ -1252,7 +1253,7 @@ int main(int argc, char *argv[]) {
             if (should_reinject) {
                 //printf("Re-injecting!\n");
                 if (should_recalc_checksum) {
-                    WinDivertHelperCalcChecksums(packet, packetLen, &addr, NULL);
+                    WinDivertHelperCalcChecksums(packet, packetLen, &addr, (UINT64)NULL);
                 }
                 WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
             }

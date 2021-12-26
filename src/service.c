@@ -30,7 +30,7 @@ int service_register(int argc, char *argv[])
      */
     if (!service_argc && !service_argv) {
         service_argc = argc;
-        service_argv = malloc(sizeof(void*) * argc);
+        service_argv = malloc(sizeof(void*) * (size_t)argc);
         for (i = 0; i < argc; i++) {
             service_argv[i] = strdup(argv[i]);
         }
@@ -71,7 +71,7 @@ void service_main(int argc __attribute__((unused)),
     SetServiceStatus(hStatus, &ServiceStatus);
 
     // Calling main with saved argc & argv
-    ServiceStatus.dwWin32ExitCode = main(service_argc, service_argv);
+    ServiceStatus.dwWin32ExitCode = (DWORD)main(service_argc, service_argv);
     ServiceStatus.dwCurrentState  = SERVICE_STOPPED;
     SetServiceStatus(hStatus, &ServiceStatus);
     return;

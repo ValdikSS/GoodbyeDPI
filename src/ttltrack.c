@@ -41,7 +41,7 @@ static tcp_connrecord_t *conntrack = NULL;
 inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_t srcip[4],
                     const uint32_t dstip[4], const uint16_t srcport, const uint16_t dstport)
 {
-    int offset = 0;
+    unsigned int offset = 0;
 
     if (is_ipv6) {
         *(uint8_t*)(key) = '6';
@@ -69,7 +69,7 @@ inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_
 inline static void fill_data_from_key(uint8_t *is_ipv6, uint32_t srcip[4], uint32_t dstip[4],
                                      uint16_t *srcport, uint16_t *dstport, const char *key)
 {
-    int offset = 0;
+    unsigned int offset = 0;
 
     if (key[0] == '6') {
         *is_ipv6 = 1;
@@ -179,9 +179,9 @@ static void tcp_cleanup() {
     }
 }
 
-int tcp_handle_incoming(const uint32_t srcip[4], const uint32_t dstip[4],
-                        const uint16_t srcport, const uint16_t dstport,
-                        const uint8_t is_ipv6, const uint8_t ttl)
+int tcp_handle_incoming(uint32_t srcip[4], uint32_t dstip[4],
+                        uint16_t srcport, uint16_t dstport,
+                        uint8_t is_ipv6, uint8_t ttl)
 {
     tcp_cleanup();
 
@@ -192,10 +192,10 @@ int tcp_handle_incoming(const uint32_t srcip[4], const uint32_t dstip[4],
     return FALSE;
 }
 
-int tcp_handle_outgoing(const uint32_t srcip[4], const uint32_t dstip[4],
-                        const uint16_t srcport, const uint16_t dstport,
+int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
+                        uint16_t srcport, uint16_t dstport,
                         tcp_conntrack_info_t *conn_info,
-                        const uint8_t is_ipv6)
+                        uint8_t is_ipv6)
 {
     char key[TCP_CONNRECORD_KEY_LEN];
     tcp_connrecord_t *tmp_connrecord = NULL;

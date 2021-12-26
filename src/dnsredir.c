@@ -44,7 +44,7 @@ static time_t last_cleanup = 0;
 static udp_connrecord_t *conntrack = NULL;
 
 void flush_dns_cache() {
-    BOOL WINAPI (*DnsFlushResolverCache)();
+    long long int WINAPI (*DnsFlushResolverCache)();
 
     HMODULE dnsapi = LoadLibrary("dnsapi.dll");
     if (dnsapi == NULL)
@@ -53,7 +53,7 @@ void flush_dns_cache() {
         exit(EXIT_FAILURE);
     }
 
-    DnsFlushResolverCache = (void*)GetProcAddress(dnsapi, "DnsFlushResolverCache");
+    DnsFlushResolverCache = GetProcAddress(dnsapi, "DnsFlushResolverCache");
     if (DnsFlushResolverCache == NULL || !DnsFlushResolverCache())
         printf("Can't flush DNS cache!");
     FreeLibrary(dnsapi);

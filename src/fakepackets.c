@@ -7,9 +7,9 @@
 #include "windivert.h"
 #include "goodbyedpi.h"
 
-static const char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
-                                        "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
-                                        "Accept-Encoding: deflate, gzip, br\r\n\r\n";
+static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
+                                                 "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
+                                                 "Accept-Encoding: deflate, gzip, br\r\n\r\n";
 static const unsigned char fake_https_request[] = {
     0x16, 0x03, 0x01, 0x02, 0x00, 0x01, 0x00, 0x01, 0xfc, 0x03, 0x03, 0x9a, 0x8f, 0xa7, 0x6a, 0x5d,
     0x57, 0xf3, 0x62, 0x19, 0xbe, 0x46, 0x82, 0x45, 0xe2, 0x59, 0x5c, 0xb4, 0x48, 0x31, 0x12, 0x15,
@@ -64,7 +64,7 @@ static int send_fake_data(const HANDLE w_filter,
     PWINDIVERT_IPHDR ppIpHdr;
     PWINDIVERT_IPV6HDR ppIpV6Hdr;
     PWINDIVERT_TCPHDR ppTcpHdr;
-    char *fake_request_data = is_https ? fake_https_request : fake_http_request;
+    unsigned const char *fake_request_data = is_https ? fake_https_request : fake_http_request;
     UINT fake_request_size = is_https ? sizeof(fake_https_request) : sizeof(fake_http_request) - 1;
 
     memcpy(&addr_new, addr, sizeof(WINDIVERT_ADDRESS));
@@ -120,7 +120,7 @@ static int send_fake_data(const HANDLE w_filter,
     }
 
     // Recalculate the checksum
-    WinDivertHelperCalcChecksums(packet_fake, packetLen_new, &addr_new, NULL);
+    WinDivertHelperCalcChecksums(packet_fake, packetLen_new, &addr_new, (UINT64)NULL);
 
     if (set_checksum) {
         // ...and damage it

@@ -35,14 +35,11 @@ static int add_hostname(const char *host) {
     if (!host)
         return FALSE;
 
-    int host_len = strlen(host);
-
     blackwhitelist_record_t *tmp_record = malloc(sizeof(blackwhitelist_record_t));
-    char *host_c = malloc(host_len + 1);
+    char *host_c = NULL;
 
     if (!check_get_hostname(host)) {
-        strncpy(host_c, host, host_len);
-        host_c[host_len] = '\0';
+        host_c = strdup(host);
         tmp_record->host = host_c;
         HASH_ADD_KEYPTR(hh, blackwhitelist, tmp_record->host,
                         strlen(tmp_record->host), tmp_record);
@@ -51,7 +48,8 @@ static int add_hostname(const char *host) {
     }
     debug("Not added host %s\n", host);
     free(tmp_record);
-    free(host_c);
+    if (host_c)
+        free(host_c);
     return FALSE;
 }
 
