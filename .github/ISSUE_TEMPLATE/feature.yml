@@ -1,0 +1,15 @@
+name:  Feature request / Предложить новую функциональность 
+description:  Suggest an idea or function for this project / Предложить новую идею или функциональность в программе
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you think of a great function or circumvention method which is missing from the program, go ahead and suggest it here.
+        Если вы придумали новую функцию или метод обхода, которого еще нет в программе, напишите о нем подробнее здесь.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe your feature / Опишите ваше предложение
+    validations:
+      required: true

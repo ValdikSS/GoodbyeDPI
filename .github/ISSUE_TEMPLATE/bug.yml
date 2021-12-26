@@ -1,0 +1,47 @@
+name: Bug Report / Сообщение об ошибке
+description: File a bug report / Сообщить об ошибке в проекте
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please pay some attention!
+        GoodbyeDPI does not guarantee to work on your ISP on 100% or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it.
+        Please report software bugs, such as: website incompatibility (if the website works without GoodbyeDPI but breaks with GoobyeDPI enabled), antivirus incompatibility, DNS redirection problems, incorrect packet handling, and other software issues.
+        Please make sure to check other opened and closed issues, it could be your question or issue has been already discussed.
+
+        Пожалуйста, прочтите!
+        GoodbyeDPI не гарантирует ни 100% работу с вашим провайдером, ни работу вообще. Если GoodbyeDPI не разблокирует доступ к некоторым или всем веб-сайтам, вероятнее всего, это не программная ошибка, и не стоит о ней сообщать здесь.
+        Сообщайте только об ошибках в программе, таких как: некорректная работа с веб-сайтами (когда веб-сайт работает без GoodbyeDPI, но ломается с GoodbyeDPI), несовместимость с антивирусами, проблемы с перенаправлением DNS, некорректная обработка пакетов, и другие проблемы.
+        Также посмотрите другие открытые и закрытые баги. Возможно, ваш вопрос или проблема уже обсуждались.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system / операционная система
+      description: Enter your Windows version. For Windows 10 and 11 include build/update number.
+      placeholder: ex. Windows 10 20H2
+    validations:
+      required: true
+  - type: dropdown
+    id: is-svc
+    attributes:
+      label: Running as service / Запуск программы как сервис
+      description: Do you use GoodbyeDPI as a Windows Service?
+      options:
+        - I run it as a regular program / Запускаю программу обычным образом
+        - I installed it as a service / Установил как сервис Windows
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Describe the issue / Опишите проблему
+      description: A clear and concise description of what the bug is / Подробно опишите, в чём заключается проблема
+      placeholder: Attach the screenshots for clarity / При необходимости приложите скриншоты
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional information / Дополнительная информация
+      description: If you have a hints on why this bug happens, you can express it here / Если у вас есть предположения об источнике бага, вы можете изложить их здесь
