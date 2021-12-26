@@ -348,7 +348,7 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
 }
 
 /**
- * Very crude Sever Name Indication (TLS ClientHello hostname) extractor.
+ * Very crude Server Name Indication (TLS ClientHello hostname) extractor.
  */
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
