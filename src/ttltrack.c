@@ -221,7 +221,7 @@ int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
 int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t decrease_for) {
     uint8_t ttl_of_fake_packet = 0;
 
-    if (ttl > 64 && ttl < 128) {
+    if (ttl > 98 && ttl < 128) {
         /* Safekeeping */
         if (128 - ttl > decrease_for + 1) {
             ttl_of_fake_packet = 128 - ttl - decrease_for;
