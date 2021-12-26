@@ -112,6 +112,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 } while (0)
 
 static int running_from_service = 0;
+static int exiting = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
 static const char http10_redirect_302[] = "HTTP/1.0 302 ";
@@ -283,6 +284,7 @@ void deinit_all() {
 }
 
 static void sigint_handler(int sig __attribute__((unused))) {
+    exiting = 1;
     deinit_all();
     exit(EXIT_SUCCESS);
 }
@@ -1260,7 +1262,8 @@ int main(int argc, char *argv[]) {
         }
         else {
             // error, ignore
-            printf("Error receiving packet!\n");
+            if (!exiting)
+                printf("Error receiving packet!\n");
             break;
         }
     }
