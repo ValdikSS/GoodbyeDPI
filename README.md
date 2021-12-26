@@ -60,13 +60,16 @@ Modern modesets (more stable, more compatible, faster):
  -6          -f 2 -e 2 --wrong-seq --reverse-frag
 ```
 
-To check if your ISP's DPI could be circumvented, run `3_all_dnsredir_hardcore.cmd` first. This is the most hardcore mode which will show if this program is suitable for your ISP and DPI vendor at all. If you can open blocked websites with this mode, it means your ISP has DPI which can be circumvented. This is the slowest and prone to break websites mode, but suitable for most DPI.
+To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
 
-Try `goodbyedpi -1` to see if it works too.
+* **Chrome**: Settings → [Privacy and security](chrome://settings/security) > Use secure DNS → With: NextDNS
+* **Firefox**: [Settings](about:preferences) → Network Settings → Enable DNS over HTTPS → Use provider: NextDNS
 
-Then try `goodbyedpi.exe -2`. It should be faster for HTTPS sites. Mode `-3` speed ups HTTP websites.
+Then run the `goodbyedpi.exe` executable without any options. If it works — congratulations! You can use it as-is or configure further, for example by using `--blacklist` option if the list of blocked websites is known and available for your country.
 
-Use `goodbyedpi.exe -4` if it works for your ISP's DPI. This is the fastest mode but not compatible with every DPI.
+If your provider intercepts DNS requests, you may want to use `--dns-addr` option to a public DNS resover running on non-standard port (such as Yandex DNS `77.88.8.8:1253`) or configure DNS over HTTPS/TLS using third-party applications.
+
+Check the .cmd scripts and modify it according to your preference and network conditions.
 
 # How does it work
 
@@ -84,7 +87,7 @@ Active DPI is more tricky to fool. Currently the software uses 7 methods to circ
 * Removing space between header name and value in `Host` header
 * Adding additional space between HTTP Method (GET, POST etc) and URI
 * Mixing case of Host header value
-* Sending fake HTTP/HTTPS packets with low Time-To-Live value or incorrect checksum to fool DPI and prevent delivering them to the destination
+* Sending fake HTTP/HTTPS packets with low Time-To-Live value, incorrect checksum or incorrect TCP Sequence/Acknowledgement numbers to fool DPI and prevent delivering them to the destination
 
 These methods should not break any website as they're fully compatible with TCP and HTTP standards, yet it's sufficient to prevent DPI data classification and to circumvent censorship. Additional space may break some websites, although it's acceptable by HTTP/1.1 specification (see 19.3 Tolerant Applications).
 
@@ -104,7 +107,8 @@ And for x86_64:
 
 # How to install as Windows Service
 
-Use `service_install_russia_blacklist.cmd`, `service_install_russia_blacklist_dnsredir.cmd` and `service_remove.cmd` scripts.  
+Check examples in `service_install_russia_blacklist.cmd`, `service_install_russia_blacklist_dnsredir.cmd` and `service_remove.cmd` scripts.
+
 Modify them according to your own needs.
 
 # Known issues
