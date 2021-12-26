@@ -1,7 +1,9 @@
 name: Build GoodbyeDPI
 
 on:
-  push
+  push:
+    paths:
+      - 'src/**'
 
 env:
   WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-1.4.3-A.zip
