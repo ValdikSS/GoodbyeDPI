@@ -89,7 +89,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
     } \
     else if (http_fragment_size != (unsigned int)fragment_size) { \
         printf( \
-            "WARNING: HTTP fragment size is already set to %d, not changing.\n", \
+            "WARNING: HTTP fragment size is already set to %u, not changing.\n", \
             http_fragment_size \
         ); \
     } \
@@ -203,7 +203,7 @@ static void finalize_filter_strings() {
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
-                         const char* needle, size_t nlen)
+                         const char* needle, unsigned int nlen)
 {
     // naive implementation
     if (nlen > hlen) return NULL;
@@ -337,11 +337,11 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
 
     /* Search for header end (\r\n) */
     data_addr_rn = dumb_memmem(*hdrvalueaddr,
-                        pktlen - (*hdrvalueaddr - pktdata),
+                        pktlen - (uintptr_t)(*hdrvalueaddr - pktdata),
                         "\r\n", 2);
     if (data_addr_rn) {
-        *hdrvaluelen = data_addr_rn - *hdrvalueaddr;
-        if (*hdrvaluelen > 0u && *hdrvaluelen <= 512u)
+        *hdrvaluelen = (uintptr_t)(data_addr_rn - *hdrvalueaddr);
+        if (*hdrvaluelen >= 3 && *hdrvaluelen <= HOST_MAXLEN)
             return TRUE;
     }
     return FALSE;
@@ -352,10 +352,10 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
  */
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
-    uint32_t ptr = 0;
-    unsigned char *d = (unsigned char*)pktdata;
-    unsigned char *hnaddr = 0;
-    unsigned int hnlen = 0;
+    unsigned int ptr = 0;
+    unsigned const char *d = (unsigned const char *)pktdata;
+    unsigned const char *hnaddr = 0;
+    int hnlen = 0;
 
     while (ptr + 8 < pktlen) {
         /* Search for specific Extensions sequence */
@@ -371,12 +371,12 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
                 }
                 hnaddr = &d[ptr+9];
                 hnlen = d[ptr+8];
-                /* Limit hostname size up to 254 bytes */
-                if (hnlen < 2 || hnlen > 254) {
+                /* Limit hostname size up to 253 bytes */
+                if (hnlen < 3 || hnlen > HOST_MAXLEN) {
                     return FALSE;
                 }
                 /* Validate that hostname has only ascii lowercase characters */
-                for (unsigned int i=0; i<hnlen; i++) {
+                for (int i=0; i<hnlen; i++) {
                     if (!( (hnaddr[i] >= '1' && hnaddr[i] <= '9') ||
                          (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
                          hnaddr[i] == '.'))
@@ -385,7 +385,7 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
                     }
                 }
                 *hostnameaddr = (char*)hnaddr;
-                *hostnamelen = hnlen;
+                *hostnamelen = (unsigned int)hnlen;
                 return TRUE;
             }
         ptr++;
@@ -833,8 +833,8 @@ int main(int argc, char *argv[]) {
     if (!https_fragment_size)
         https_fragment_size = 2;
 
-    printf("Block passive: %d\nFragment HTTP: %d\nFragment persistent HTTP: %d\n"
-           "Fragment HTTPS: %d\nNative fragmentation (splitting): %d\n"
+    printf("Block passive: %d\nFragment HTTP: %u\nFragment persistent HTTP: %u\n"
+           "Fragment HTTPS: %u\nNative fragmentation (splitting): %d\n"
            "Fragments sending in reverse: %d\n"
            "hoSt: %d\nHost no space: %d\nAdditional space: %d\n"
            "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
@@ -980,7 +980,7 @@ int main(int argc, char *argv[]) {
                             : 1)
                         {
 #ifdef DEBUG
-                            unsigned char lsni[256] = {0};
+                            char lsni[HOST_MAXLEN + 1] = {0};
                             extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
                             memcpy(&lsni, host_addr, host_len);
@@ -1021,7 +1021,7 @@ int main(int argc, char *argv[]) {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
 #ifdef DEBUG
-                        unsigned char lhost[256] = {0};
+                        char lhost[HOST_MAXLEN + 1] = {0};
                         memcpy(&lhost, host_addr, host_len);
                         printf("Blocked HTTP website Host: %s\n", lhost);
 #endif
@@ -1092,7 +1092,7 @@ int main(int argc, char *argv[]) {
                                                 (size_t)(useragent_addr + useragent_len - host_addr));
                                         host_addr -= 1;
                                         /* Put space in the end of User-Agent header */
-                                        *(char*)((uint8_t*)useragent_addr + useragent_len - 1) = ' ';
+                                        *(char*)((unsigned char*)useragent_addr + useragent_len - 1) = ' ';
                                         should_recalc_checksum = 1;
                                         //printf("Replaced Host header!\n");
                                     }
@@ -1106,7 +1106,7 @@ int main(int argc, char *argv[]) {
                                                 useragent_addr + useragent_len,
                                                 (size_t)(host_addr - 1 - (useragent_addr + useragent_len)));
                                         /* Put space in the end of User-Agent header */
-                                        *(char*)((uint8_t*)useragent_addr + useragent_len) = ' ';
+                                        *(char*)((unsigned char*)useragent_addr + useragent_len) = ' ';
                                         should_recalc_checksum = 1;
                                         //printf("Replaced Host header!\n");
                                     }
@@ -1255,7 +1255,7 @@ int main(int argc, char *argv[]) {
             if (should_reinject) {
                 //printf("Re-injecting!\n");
                 if (should_recalc_checksum) {
-                    WinDivertHelperCalcChecksums(packet, packetLen, &addr, (UINT64)NULL);
+                    WinDivertHelperCalcChecksums(packet, packetLen, &addr, (UINT64)0LL);
                 }
                 WinDivertSend(w_filter, packet, packetLen, &addr, NULL);
             }

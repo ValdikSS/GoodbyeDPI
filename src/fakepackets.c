@@ -120,7 +120,7 @@ static int send_fake_data(const HANDLE w_filter,
     }
 
     // Recalculate the checksum
-    WinDivertHelperCalcChecksums(packet_fake, packetLen_new, &addr_new, (UINT64)NULL);
+    WinDivertHelperCalcChecksums(packet_fake, packetLen_new, &addr_new, 0ULL);
 
     if (set_checksum) {
         // ...and damage it

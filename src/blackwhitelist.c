@@ -70,8 +70,10 @@ int blackwhitelist_load_list(const char *filename) {
                 line);
             continue;
         }
-        if (strlen(line) < 4)
+        if (strlen(line) < 3) {
+            printf("WARNING: host %s is less than 3 bytes, skipping\n", line);
             continue;
+        }
         if (add_hostname(line))
             cnt++;
     }
