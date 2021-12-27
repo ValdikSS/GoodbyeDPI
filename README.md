@@ -5,7 +5,7 @@ This software designed to bypass Deep Packet Inspection systems found in many In
 
 It handles DPI connected using optical splitter or port mirroring (**Passive DPI**) which do not block any data but just replying faster than requested destination, and **Active DPI** connected in sequence.
 
-**Windows 7, 8, 8.1 and 10** with administrator privileges required.
+**Windows 7, 8, 8.1, 10 or 11** with administrator privileges required.
 
 # How to use
 
@@ -62,7 +62,7 @@ Modern modesets (more stable, more compatible, faster):
 
 To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
 
-* **Chrome**: Settings → [Privacy and security](chrome://settings/security) > Use secure DNS → With: NextDNS
+* **Chrome**: Settings → [Privacy and security](chrome://settings/security) → Use secure DNS → With: NextDNS
 * **Firefox**: [Settings](about:preferences) → Network Settings → Enable DNS over HTTPS → Use provider: NextDNS
 
 Then run the `goodbyedpi.exe` executable without any options. If it works — congratulations! You can use it as-is or configure further, for example by using `--blacklist` option if the list of blocked websites is known and available for your country.
