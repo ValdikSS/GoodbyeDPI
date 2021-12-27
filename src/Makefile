@@ -14,7 +14,11 @@ CC = $(CPREFIX)gcc
 CCWINDRES = $(CPREFIX)windres
 CFLAGS = -std=c99 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -O2 -D_FORTIFY_SOURCE=2 -fstack-protector \
-         -Wall -Wextra -Wpedantic -Wformat=2 -Wno-format-nonliteral -Wshadow -Wstrict-aliasing=1 -Werror=format-security \
+         -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 \
+         -Wformat-security -Wno-format-nonliteral -Wshadow -Wstrict-aliasing=1 \
+         -Wnull-dereference -Warray-bounds=2 -Wimplicit-fallthrough=3 \
+         -Wstringop-overflow=4 \
+         -Wformat-signedness -Wstrict-overflow=2 -Wcast-align=strict \
          -Wfloat-equal -Wcast-align -Wsign-conversion \
          #-fstack-protector-strong
 LDFLAGS = -fstack-protector -Wl,-O1,-pie,--dynamicbase,--nxcompat,--sort-common,--as-needed \
