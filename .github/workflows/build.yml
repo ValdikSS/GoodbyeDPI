@@ -23,6 +23,7 @@ jobs:
 
       - name: Install MinGW-w64
         run: >
+          sudo rm /var/lib/man-db/auto-update &&
           sudo DEBIAN_FRONTEND=noninteractive XZ_DEFAULTS="-T0" XZ_OPT="-T0" eatmydata
           apt install -y --no-install-recommends gcc-mingw-w64
 
