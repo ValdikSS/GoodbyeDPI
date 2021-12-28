@@ -104,7 +104,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
                         &tcp_conn_info, 1))) \
     { \
-        ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, do_auto_ttl); \
+        ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, 1, do_auto_ttl, 3); \
         if (do_tcp_verb) { \
             printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
         } \

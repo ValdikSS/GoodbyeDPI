@@ -21,5 +21,6 @@ int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
                         tcp_conntrack_info_t *conn_info,
                         uint8_t is_ipv6);
 
-int tcp_get_auto_ttl(uint8_t ttl, uint8_t decrease_for);
+int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t autottl1,
+                     const uint8_t autottl2, const uint8_t minhops);
 #endif

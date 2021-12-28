@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <time.h>
 #include <stdio.h>
+#include <math.h>
 #include "goodbyedpi.h"
 #include "ttltrack.h"
 #include "utils/uthash.h"
@@ -218,23 +219,28 @@ int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
     return FALSE;
 }
 
-int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t decrease_for) {
+int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t autottl1,
+                     const uint8_t autottl2, const uint8_t minhops) {
+    uint8_t nhops = 0;
     uint8_t ttl_of_fake_packet = 0;
 
     if (ttl > 98 && ttl < 128) {
-        /* Safekeeping */
-        if (128 - ttl > decrease_for + 1) {
-            ttl_of_fake_packet = 128 - ttl - decrease_for;
-        }
+        nhops = 128 - ttl;
     }
     else if (ttl > 34 && ttl < 64) {
-        /* Safekeeping */
-        if (64 - ttl > decrease_for + 1) {
-            ttl_of_fake_packet = 64 - ttl - decrease_for;
-        }
+        nhops = 64 - ttl;
     }
     else {
-        ttl_of_fake_packet = 0;
+        return 0;
+    }
+
+    if (nhops <= autottl1 || nhops < minhops) {
+        return 0;
+    }
+
+    ttl_of_fake_packet = nhops - autottl2;
+    if (ttl_of_fake_packet < autottl2 && nhops <= 9) {
+        ttl_of_fake_packet = nhops - autottl1 - trunc((autottl2 - autottl1) * ((float)nhops/10));
     }
 
     return ttl_of_fake_packet;
