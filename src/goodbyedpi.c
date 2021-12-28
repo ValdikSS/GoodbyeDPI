@@ -95,21 +95,40 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
     } \
 } while (0)
 
-#define TCP_HANDLE_OUTGOING_ADJUST_TTL() do { \
+#define TCP_HANDLE_OUTGOING_TTL_PARSE_PACKET_IF() \
     if ((packet_v4 && tcp_handle_outgoing(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr, \
                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
                         &tcp_conn_info, 0)) \
         || \
         (packet_v6 && tcp_handle_outgoing(ppIpV6Hdr->SrcAddr, ppIpV6Hdr->DstAddr, \
                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
-                        &tcp_conn_info, 1))) \
-    { \
-        ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, 1, do_auto_ttl, 3); \
-        if (do_tcp_verb) { \
-            printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
+                        &tcp_conn_info, 1)))
+
+#define TCP_HANDLE_OUTGOING_FAKE_PACKET(func) do { \
+    should_send_fake = 1; \
+    if (do_auto_ttl || ttl_min_nhops) { \
+        TCP_HANDLE_OUTGOING_TTL_PARSE_PACKET_IF() { \
+            if (do_auto_ttl) { \
+                /* If Auto TTL mode */ \
+                ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, auto_ttl_1, auto_ttl_2, ttl_min_nhops); \
+                if (do_tcp_verb) { \
+                    printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
+                } \
+            } \
+            else if (ttl_min_nhops) { \
+                /* If not Auto TTL mode but --min-ttl is set */ \
+                if (tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops)) { \
+                    /* Send only if nhops > min_ttl */ \
+                    should_send_fake = 0; \
+                } \
+            } \
         } \
     } \
+    if (should_send_fake) \
+        func(w_filter, &addr, packet, packetLen, packet_v6, \
+             ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq); \
 } while (0)
+
 
 static int running_from_service = 0;
 static int exiting = 0;
@@ -142,6 +161,7 @@ static struct option long_options[] = {
     {"blacklist",   required_argument, 0,  'b' },
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
+    {"min-ttl",     required_argument, 0,  '[' },
     {"auto-ttl",    optional_argument, 0,  '+' },
     {"wrong-chksum",no_argument,       0,  '%' },
     {"wrong-seq",   no_argument,       0,  ')' },
@@ -527,7 +547,11 @@ int main(int argc, char *argv[]) {
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
     unsigned int current_fragment_size = 0;
+    BYTE should_send_fake = 0;
     BYTE ttl_of_fake_packet = 0;
+    BYTE ttl_min_nhops = 0;
+    BYTE auto_ttl_1 = 0;
+    BYTE auto_ttl_2 = 0;
     uint32_t dnsv4_addr = 0;
     struct in6_addr dnsv6_addr = {0};
     struct in6_addr dns_temp_addr = {0};
@@ -749,13 +773,36 @@ int main(int argc, char *argv[]) {
                 do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
                 break;
-            case '+':
+            case '[': // --min-ttl
                 do_fake_packet = 1;
-                do_auto_ttl = 4;
+                ttl_min_nhops = atoub(optarg, "Set Minimum TTL number of hops parameter error!");
+                break;
+            case '+': // --auto-ttl
+                do_fake_packet = 1;
+                do_auto_ttl = 1;
+
+                if (!optarg && argv[optind] && argv[optind][0] != '-')
+                    optarg = argv[optind];
+
                 if (optarg) {
-                    do_auto_ttl = atoub(optarg, "Set Auto TTL parameter error!");
-                } else if (argv[optind] && argv[optind][0] != '-') {
-                    do_auto_ttl = atoub(argv[optind], "Set Auto TTL parameter error!");
+                    char *autottl_copy = strdup(optarg);
+                    if (strchr(autottl_copy, '-')) {
+                        // token "-" found, start X-Y parser
+                        char *autottl_current = strtok(autottl_copy, "-");
+                        auto_ttl_1 = atoub(autottl_current, "Set Auto TTL parameter error!");
+                        autottl_current = strtok(NULL, "-");
+                        if (!autottl_current) {
+                            puts("Set Auto TTL parameter error!");
+                            exit(EXIT_FAILURE);
+                        }
+                        auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
+                    }
+                    else {
+                        // single digit parser
+                        auto_ttl_2 = atoub(optarg, "Set Auto TTL parameter error!");
+                        auto_ttl_1 = auto_ttl_2;
+                    }
+                    free(autottl_copy);
                 }
                 break;
             case '%':
@@ -801,8 +848,12 @@ int main(int argc, char *argv[]) {
                 "                          This option can be supplied multiple times.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
-                " --auto-ttl    [decttl]   activate Fake Request Mode, automatically detect TTL and decrease\n"
-                "                          it from standard 64 or 128 by decttl (128/64 - TTL - 4 by default).\n"
+                " --auto-ttl    [a1-a2]    activate Fake Request Mode, automatically detect TTL and decrease\n"
+                "                          it based on a distance. If the distance is shorter than a2, TTL is decreased\n"
+                "                          by a2. If it's longer, (a1; a2) scale is used with the distance as a weight.\n"
+                "                          Default (if set): --auto-ttl 1-4, also sets --min-ttl 3.\n"
+                " --min-ttl     <value>    minimum TTL distance (128/64 - TTL) for which to send Fake Request\n"
+                "                          in --set-ttl and --auto-ttl modes.\n"
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
                 "                          May not work in a VM or with some routers, but is safer than set-ttl.\n"
                 "                          Could be combined with --set-ttl\n"
@@ -832,6 +883,12 @@ int main(int argc, char *argv[]) {
         http_fragment_size = 2;
     if (!https_fragment_size)
         https_fragment_size = 2;
+    if (!auto_ttl_1)
+        auto_ttl_1 = 1;
+    if (!auto_ttl_2)
+        auto_ttl_2 = 4;
+    if (do_auto_ttl && !ttl_min_nhops)
+        ttl_min_nhops = 3;
 
     printf("Block passive: %d\nFragment HTTP: %u\nFragment persistent HTTP: %u\n"
            "Fragment HTTPS: %u\nNative fragmentation (splitting): %d\n"
@@ -987,11 +1044,7 @@ int main(int argc, char *argv[]) {
                             printf("Blocked HTTPS website SNI: %s\n", lsni);
 #endif
                             if (do_fake_packet) {
-                                if (do_auto_ttl) {
-                                    TCP_HANDLE_OUTGOING_ADJUST_TTL();
-                                }
-                                send_fake_https_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                        ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
+                                TCP_HANDLE_OUTGOING_FAKE_PACKET(send_fake_https_request);
                             }
                             if (do_native_frag) {
                                 // Signal for native fragmentation code handler
@@ -1032,11 +1085,7 @@ int main(int argc, char *argv[]) {
                         }
 
                         if (do_fake_packet) {
-                            if (do_auto_ttl) {
-                                TCP_HANDLE_OUTGOING_ADJUST_TTL();
-                            }
-                            send_fake_http_request(w_filter, &addr, packet, packetLen, packet_v6,
-                                                   ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq);
+                            TCP_HANDLE_OUTGOING_FAKE_PACKET(send_fake_http_request);
                         }
 
                         if (do_host_mixedcase) {
@@ -1157,7 +1206,7 @@ int main(int argc, char *argv[]) {
                      * is enabled as there could be non-HTTP data on port 80
                      */
 
-                    if (do_fake_packet && do_auto_ttl) {
+                    if (do_fake_packet && (do_auto_ttl || ttl_min_nhops)) {
                         if (!((packet_v4 && tcp_handle_incoming(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr,
                                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
                                         0, ppIpHdr->TTL))
