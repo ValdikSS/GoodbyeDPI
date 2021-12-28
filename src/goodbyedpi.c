@@ -683,7 +683,7 @@ int main(int argc, char *argv[]) {
             case 'w':
                 do_http_allports = 1;
                 break;
-            case 'z':
+            case 'z': // --port
                 /* i is used as a temporary variable here */
                 i = atoi(optarg);
                 if (i <= 0 || i > 65535) {
@@ -694,13 +694,13 @@ int main(int argc, char *argv[]) {
                     add_filter_str(IPPROTO_TCP, i);
                 i = 0;
                 break;
-            case 'i':
+            case 'i': // --ip-id
                 /* i is used as a temporary variable here */
                 i = atousi(optarg, "IP ID parameter error!\n");
                 add_ip_id_str(i);
                 i = 0;
                 break;
-            case 'd':
+            case 'd': // --dns-addr
                 if ((inet_pton(AF_INET, optarg, dns_temp_addr.s6_addr) == 1) &&
                     !do_dnsv4_redirect)
                 {
@@ -716,7 +716,7 @@ int main(int argc, char *argv[]) {
                 puts("DNS address parameter error!");
                 exit(EXIT_FAILURE);
                 break;
-            case '!':
+            case '!': // --dnsv6-addr
                 if ((inet_pton(AF_INET6, optarg, dns_temp_addr.s6_addr) == 1) &&
                     !do_dnsv6_redirect)
                 {
@@ -732,7 +732,7 @@ int main(int argc, char *argv[]) {
                 puts("DNS address parameter error!");
                 exit(EXIT_FAILURE);
                 break;
-            case 'g':
+            case 'g': // --dns-port
                 if (!do_dnsv4_redirect) {
                     puts("--dns-port should be used with --dns-addr!\n"
                         "Make sure you use --dns-addr and pass it before "
@@ -745,7 +745,7 @@ int main(int argc, char *argv[]) {
                 }
                 dnsv4_port = htons(dnsv4_port);
                 break;
-            case '@':
+            case '@': // --dnsv6-port
                 if (!do_dnsv6_redirect) {
                     puts("--dnsv6-port should be used with --dnsv6-addr!\n"
                         "Make sure you use --dnsv6-addr and pass it before "
@@ -762,14 +762,14 @@ int main(int argc, char *argv[]) {
                 do_dns_verb = 1;
                 do_tcp_verb = 1;
                 break;
-            case 'b':
+            case 'b': // --blacklist
                 do_blacklist = 1;
                 if (!blackwhitelist_load_list(optarg)) {
                     printf("Can't load blacklist from file!\n");
                     exit(EXIT_FAILURE);
                 }
                 break;
-            case '$':
+            case '$': // --set-ttl
                 do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
                 break;
@@ -805,20 +805,20 @@ int main(int argc, char *argv[]) {
                     free(autottl_copy);
                 }
                 break;
-            case '%':
+            case '%': // --wrong-chksum
                 do_fake_packet = 1;
                 do_wrong_chksum = 1;
                 break;
-            case ')':
+            case ')': // --wrong-seq
                 do_fake_packet = 1;
                 do_wrong_seq = 1;
                 break;
-            case '*':
+            case '*': // --native-frag
                 do_native_frag = 1;
                 do_fragment_http_persistent = 1;
                 do_fragment_http_persistent_nowait = 1;
                 break;
-            case '(':
+            case '(': // --reverse-frag
                 do_reverse_frag = 1;
                 do_native_frag = 1;
                 do_fragment_http_persistent = 1;
@@ -890,31 +890,50 @@ int main(int argc, char *argv[]) {
     if (do_auto_ttl && !ttl_min_nhops)
         ttl_min_nhops = 3;
 
-    printf("Block passive: %d\nFragment HTTP: %u\nFragment persistent HTTP: %u\n"
-           "Fragment HTTPS: %u\nNative fragmentation (splitting): %d\n"
-           "Fragments sending in reverse: %d\n"
-           "hoSt: %d\nHost no space: %d\nAdditional space: %d\n"
-           "Mix Host: %d\nHTTP AllPorts: %d\nHTTP Persistent Nowait: %d\n"
-           "DNS redirect: %d\nDNSv6 redirect: %d\n"
-           "Fake requests, TTL: %hu (auto: %hu)\nFake requests, wrong checksum: %d\n"
-           "Fake requests, wrong SEQ/ACK: %d\n",
-           do_passivedpi, (do_fragment_http ? http_fragment_size : 0),
-           (do_fragment_http_persistent ? http_fragment_size : 0),
-           (do_fragment_https ? https_fragment_size : 0),
-           do_native_frag, do_reverse_frag,
-           do_host, do_host_removespace, do_additional_space, do_host_mixedcase,
-           do_http_allports, do_fragment_http_persistent_nowait, do_dnsv4_redirect,
-           do_dnsv6_redirect, ttl_of_fake_packet, do_auto_ttl,
-           do_wrong_chksum, do_wrong_seq
+    printf("Block passive: %d\n"                    /* 1 */
+           "Fragment HTTP: %u\n"                    /* 2 */
+           "Fragment persistent HTTP: %u\n"         /* 3 */
+           "Fragment HTTPS: %u\n"                   /* 4 */
+           "Native fragmentation (splitting): %d\n" /* 5 */
+           "Fragments sending in reverse: %d\n"     /* 6 */
+           "hoSt: %d\n"                             /* 7 */
+           "Host no space: %d\n"                    /* 8 */
+           "Additional space: %d\n"                 /* 9 */
+           "Mix Host: %d\n"                         /* 10 */
+           "HTTP AllPorts: %d\n"                    /* 11 */
+           "HTTP Persistent Nowait: %d\n"           /* 12 */
+           "DNS redirect: %d\n"                     /* 13 */
+           "DNSv6 redirect: %d\n"                   /* 14 */
+           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu, min distance: %hu)\n"  /* 15 */
+           "Fake requests, wrong checksum: %d\n"    /* 16 */
+           "Fake requests, wrong SEQ/ACK: %d\n",    /* 17 */
+           do_passivedpi,                                         /* 1 */
+           (do_fragment_http ? http_fragment_size : 0),           /* 2 */
+           (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
+           (do_fragment_https ? https_fragment_size : 0),         /* 4 */
+           do_native_frag,        /* 5 */
+           do_reverse_frag,       /* 6 */
+           do_host,               /* 7 */
+           do_host_removespace,   /* 8 */
+           do_additional_space,   /* 9 */
+           do_host_mixedcase,     /* 10 */
+           do_http_allports,      /* 11 */
+           do_fragment_http_persistent_nowait, /* 12 */
+           do_dnsv4_redirect,                  /* 13 */
+           do_dnsv6_redirect,                  /* 14 */
+           ttl_of_fake_packet ? "fixed" : (do_auto_ttl ? "auto" : "disabled"),  /* 15 */
+               ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0, ttl_min_nhops,
+           do_wrong_chksum, /* 16 */
+           do_wrong_seq     /* 17 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
-        printf("WARNING: HTTP fragmentation values > 2 are not fully compatible "
-               "with other options. Please use values <= 2 or disable HTTP fragmentation "
-               "completely.\n");
+        puts("\nWARNING: HTTP fragmentation values > 2 are not fully compatible "
+             "with other options. Please use values <= 2 or disable HTTP fragmentation "
+             "completely.");
     }
 
-    printf("\nOpening filter\n");
+    puts("\nOpening filter");
     finalize_filter_strings();
     filter_num = 0;
 
@@ -942,7 +961,7 @@ int main(int argc, char *argv[]) {
             die();
     }
 
-    printf("Filter activated!\n");
+    printf("Filter activated, GoodbyeDPI is now running!\n");
     signal(SIGINT, sigint_handler);
 
     while (1) {
