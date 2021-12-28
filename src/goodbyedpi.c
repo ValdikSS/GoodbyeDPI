@@ -933,6 +933,12 @@ int main(int argc, char *argv[]) {
              "completely.");
     }
 
+    if (do_native_frag && !(do_fragment_http || do_fragment_https)) {
+        puts("\nERROR: Native fragmentation is enabled but fragment sizes are not set.\n"
+             "Fragmentation has no effect.");
+        exit(EXIT_FAILURE);
+    }
+
     puts("\nOpening filter");
     finalize_filter_strings();
     filter_num = 0;
