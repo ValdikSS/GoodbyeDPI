@@ -220,7 +220,8 @@ int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
 }
 
 int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t autottl1,
-                     const uint8_t autottl2, const uint8_t minhops) {
+                     const uint8_t autottl2, const uint8_t minhops,
+                     const uint8_t maxttl) {
     uint8_t nhops = 0;
     uint8_t ttl_of_fake_packet = 0;
 
@@ -241,6 +242,10 @@ int tcp_get_auto_ttl(const uint8_t ttl, const uint8_t autottl1,
     ttl_of_fake_packet = nhops - autottl2;
     if (ttl_of_fake_packet < autottl2 && nhops <= 9) {
         ttl_of_fake_packet = nhops - autottl1 - trunc((autottl2 - autottl1) * ((float)nhops/10));
+    }
+
+    if (maxttl && ttl_of_fake_packet > maxttl) {
+        ttl_of_fake_packet = maxttl;
     }
 
     return ttl_of_fake_packet;

@@ -110,14 +110,15 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
         TCP_HANDLE_OUTGOING_TTL_PARSE_PACKET_IF() { \
             if (do_auto_ttl) { \
                 /* If Auto TTL mode */ \
-                ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, auto_ttl_1, auto_ttl_2, ttl_min_nhops); \
+                ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, auto_ttl_1, auto_ttl_2, \
+                                                      ttl_min_nhops, auto_ttl_max); \
                 if (do_tcp_verb) { \
                     printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
                 } \
             } \
             else if (ttl_min_nhops) { \
                 /* If not Auto TTL mode but --min-ttl is set */ \
-                if (tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops)) { \
+                if (tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops, 0)) { \
                     /* Send only if nhops > min_ttl */ \
                     should_send_fake = 0; \
                 } \
@@ -552,6 +553,7 @@ int main(int argc, char *argv[]) {
     BYTE ttl_min_nhops = 0;
     BYTE auto_ttl_1 = 0;
     BYTE auto_ttl_2 = 0;
+    BYTE auto_ttl_max = 0;
     uint32_t dnsv4_addr = 0;
     struct in6_addr dnsv6_addr = {0};
     struct in6_addr dns_temp_addr = {0};
@@ -604,7 +606,7 @@ int main(int argc, char *argv[]) {
         http_fragment_size = https_fragment_size = 2;
         do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
         do_fake_packet = 1;
-        do_auto_ttl = 4;
+        do_auto_ttl = 1;
     }
 
     while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
@@ -636,7 +638,7 @@ int main(int argc, char *argv[]) {
                 http_fragment_size = https_fragment_size = 2;
                 do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
                 do_fake_packet = 1;
-                do_auto_ttl = 4;
+                do_auto_ttl = 1;
                 break;
             case '6':
                 do_fragment_http = do_fragment_https = 1;
@@ -796,6 +798,12 @@ int main(int argc, char *argv[]) {
                             exit(EXIT_FAILURE);
                         }
                         auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
+                        autottl_current = strtok(NULL, "-");
+                        if (!autottl_current) {
+                            puts("Set Auto TTL parameter error!");
+                            exit(EXIT_FAILURE);
+                        }
+                        auto_ttl_max = atoub(autottl_current, "Set Auto TTL parameter error!");
                     }
                     else {
                         // single digit parser
@@ -847,11 +855,13 @@ int main(int argc, char *argv[]) {
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
                 "                          This option can be supplied multiple times.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
-                "                          DANGEROUS! May break websites in unexpected ways. Use with care.\n"
-                " --auto-ttl    [a1-a2]    activate Fake Request Mode, automatically detect TTL and decrease\n"
+                "                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).\n"
+                " --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease\n"
                 "                          it based on a distance. If the distance is shorter than a2, TTL is decreased\n"
                 "                          by a2. If it's longer, (a1; a2) scale is used with the distance as a weight.\n"
-                "                          Default (if set): --auto-ttl 1-4, also sets --min-ttl 3.\n"
+                "                          If the resulting TTL is more than m(ax), set it to m.\n"
+                "                          Default (if set): --auto-ttl 1-4-10. Also sets --min-ttl 3.\n"
+                "                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).\n"
                 " --min-ttl     <value>    minimum TTL distance (128/64 - TTL) for which to send Fake Request\n"
                 "                          in --set-ttl and --auto-ttl modes.\n"
                 " --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.\n"
@@ -887,8 +897,12 @@ int main(int argc, char *argv[]) {
         auto_ttl_1 = 1;
     if (!auto_ttl_2)
         auto_ttl_2 = 4;
-    if (do_auto_ttl && !ttl_min_nhops)
-        ttl_min_nhops = 3;
+    if (do_auto_ttl) {
+        if (!ttl_min_nhops)
+            ttl_min_nhops = 3;
+        if (!auto_ttl_max)
+            auto_ttl_max = 10;
+    }
 
     printf("Block passive: %d\n"                    /* 1 */
            "Fragment HTTP: %u\n"                    /* 2 */
@@ -904,7 +918,7 @@ int main(int argc, char *argv[]) {
            "HTTP Persistent Nowait: %d\n"           /* 12 */
            "DNS redirect: %d\n"                     /* 13 */
            "DNSv6 redirect: %d\n"                   /* 14 */
-           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu, min distance: %hu)\n"  /* 15 */
+           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 15 */
            "Fake requests, wrong checksum: %d\n"    /* 16 */
            "Fake requests, wrong SEQ/ACK: %d\n",    /* 17 */
            do_passivedpi,                                         /* 1 */
@@ -922,7 +936,8 @@ int main(int argc, char *argv[]) {
            do_dnsv4_redirect,                  /* 13 */
            do_dnsv6_redirect,                  /* 14 */
            ttl_of_fake_packet ? "fixed" : (do_auto_ttl ? "auto" : "disabled"),  /* 15 */
-               ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0, ttl_min_nhops,
+               ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0,
+               do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
            do_wrong_chksum, /* 16 */
            do_wrong_seq     /* 17 */
           );
