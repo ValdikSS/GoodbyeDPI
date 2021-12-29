@@ -34,6 +34,7 @@ Usage: goodbyedpi.exe [OPTION...]
  --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from
                           supplied text file (HTTP Host/TLS SNI).
                           This option can be supplied multiple times.
+ --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.
  --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.
                           DANGEROUS! May break websites in unexpected ways. Use with care.
  --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease

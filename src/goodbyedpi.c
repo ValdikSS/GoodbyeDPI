@@ -160,6 +160,7 @@ static struct option long_options[] = {
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
+    {"allow-no-sni",no_argument,       0,  ']' },
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
     {"min-ttl",     required_argument, 0,  '[' },
@@ -523,6 +524,7 @@ int main(int argc, char *argv[]) {
         ipv6_tcp, ipv6_tcp_data, ipv6_udp_data
     } packet_type;
     int i, should_reinject, should_recalc_checksum = 0;
+    int sni_ok = 0;
     int opt;
     int packet_v4, packet_v6;
     HANDLE w_filter = NULL;
@@ -547,6 +549,7 @@ int main(int argc, char *argv[]) {
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_tcp_verb = 0, do_blacklist = 0,
+        do_allow_no_sni = 0,
         do_fake_packet = 0,
         do_auto_ttl = 0,
         do_wrong_chksum = 0,
@@ -778,6 +781,9 @@ int main(int argc, char *argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 break;
+            case ']': // --allow-no-sni
+                do_allow_no_sni = 1;
+                break;
             case '$': // --set-ttl
                 do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
@@ -861,6 +867,7 @@ int main(int argc, char *argv[]) {
                 " --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from\n"
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
                 "                          This option can be supplied multiple times.\n"
+                " --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).\n"
                 " --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease\n"
@@ -925,9 +932,10 @@ int main(int argc, char *argv[]) {
            "HTTP Persistent Nowait: %d\n"           /* 12 */
            "DNS redirect: %d\n"                     /* 13 */
            "DNSv6 redirect: %d\n"                   /* 14 */
-           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 15 */
-           "Fake requests, wrong checksum: %d\n"    /* 16 */
-           "Fake requests, wrong SEQ/ACK: %d\n",    /* 17 */
+           "Allow missing SNI: %d\n"                /* 15 */
+           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 16 */
+           "Fake requests, wrong checksum: %d\n"    /* 17 */
+           "Fake requests, wrong SEQ/ACK: %d\n",    /* 18 */
            do_passivedpi,                                         /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
@@ -942,11 +950,12 @@ int main(int argc, char *argv[]) {
            do_fragment_http_persistent_nowait, /* 12 */
            do_dnsv4_redirect,                  /* 13 */
            do_dnsv6_redirect,                  /* 14 */
-           ttl_of_fake_packet ? "fixed" : (do_auto_ttl ? "auto" : "disabled"),  /* 15 */
+           do_allow_no_sni,                    /* 15 */
+           ttl_of_fake_packet ? "fixed" : (do_auto_ttl ? "auto" : "disabled"),  /* 16 */
                ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0,
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
-           do_wrong_chksum, /* 16 */
-           do_wrong_seq     /* 17 */
+           do_wrong_chksum, /* 17 */
+           do_wrong_seq     /* 18 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
@@ -1083,11 +1092,17 @@ int main(int argc, char *argv[]) {
                     if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
                         (packet_dataLen >= 3 && memcmp(packet_data, "\x16\x03\x01", 3) == 0))
                     {
-                        if (do_blacklist
-                            ? (extract_sni(packet_data, packet_dataLen,
-                                        &host_addr, &host_len) &&
-                              blackwhitelist_check_hostname(host_addr, host_len))
-                            : 1)
+                        if (do_blacklist) {
+                            sni_ok = extract_sni(packet_data, packet_dataLen,
+                                        &host_addr, &host_len);
+                        }
+                        if (
+                             (do_blacklist && sni_ok &&
+                              blackwhitelist_check_hostname(host_addr, host_len)
+                             ) ||
+                             (do_blacklist && !sni_ok && do_allow_no_sni) ||
+                             (!do_blacklist)
+                           )
                         {
 #ifdef DEBUG
                             char lsni[HOST_MAXLEN + 1] = {0};
