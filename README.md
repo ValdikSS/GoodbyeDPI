@@ -1,4 +1,4 @@
-GoodbyeDPI — Passive Deep Packet Inspection blocker and Active DPI circumvention utility
+GoodbyeDPI — Deep Packet Inspection circumvention utility
 =========================
 
 This software designed to bypass Deep Packet Inspection systems found in many Internet Service Providers which block access to certain websites.
@@ -6,6 +6,11 @@ This software designed to bypass Deep Packet Inspection systems found in many In
 It handles DPI connected using optical splitter or port mirroring (**Passive DPI**) which do not block any data but just replying faster than requested destination, and **Active DPI** connected in sequence.
 
 **Windows 7, 8, 8.1, 10 or 11** with administrator privileges required.
+
+# Quick start
+
+* **For Russia**: Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases), unpack the file and run **1_russia_blacklist_dnsredir.cmd** script.
+* For other countries: Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases), unpack the file and run **2_any_country_dnsredir.cmd**.
 
 # How to use
 
