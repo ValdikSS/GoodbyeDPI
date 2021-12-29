@@ -1076,7 +1076,13 @@ int main(int argc, char *argv[]) {
                          (do_fake_packet || do_native_frag)
                         )
                 {
-                    if (packet_dataLen >=2 && memcmp(packet_data, "\x16\x03", 2) == 0) {
+                    /**
+                     * In case of Window Size fragmentation=2, we'll receive only 2 byte packet.
+                     * But if the packet is more than 2 bytes, check ClientHello byte.
+                    */
+                    if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
+                        (packet_dataLen >= 3 && memcmp(packet_data, "\x16\x03\x01", 3) == 0))
+                    {
                         if (do_blacklist
                             ? (extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len) &&
