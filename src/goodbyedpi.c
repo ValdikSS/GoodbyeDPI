@@ -458,6 +458,13 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
     memcpy(&packet_bak, packet, packetLen);
     UINT orig_packetLen = packetLen;
 
+    if (fragment_size >= packet_dataLen) {
+        if (step == 1)
+            fragment_size = 0;
+        else
+            return;
+    }
+
     if (step == 0) {
         if (packet_v4)
             ppIpHdr->Length = htons(
