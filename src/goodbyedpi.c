@@ -634,6 +634,7 @@ int main(int argc, char *argv[]) {
         do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
         do_fake_packet = 1;
         do_auto_ttl = 1;
+        max_payload_size = 1200;
     }
 
     while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
@@ -666,6 +667,7 @@ int main(int argc, char *argv[]) {
                 do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
                 do_fake_packet = 1;
                 do_auto_ttl = 1;
+                max_payload_size = 1200;
                 break;
             case '6':
                 do_fragment_http = do_fragment_https = 1;
@@ -674,6 +676,7 @@ int main(int argc, char *argv[]) {
                 do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
                 do_fake_packet = 1;
                 do_wrong_seq = 1;
+                max_payload_size = 1200;
                 break;
             case 'p':
                 do_passivedpi = 1;
