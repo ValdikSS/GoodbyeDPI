@@ -58,6 +58,10 @@ Usage: goodbyedpi.exe [OPTION...]
  --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the
                           reversed order. Works with the websites which could not handle segmented
                           HTTPS TLS ClientHello (because they receive the TCP flow "combined").
+ --max-payload [value]    packets with TCP payload data more than [value] won't be processed.
+                          Use this option to reduce CPU usage by skipping huge amount of data
+                          (like file transfers) in already established sessions.
+                          May skip some huge HTTP requests from being processed.
 
 
 LEGACY modesets:

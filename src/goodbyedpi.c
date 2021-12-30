@@ -61,8 +61,9 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
 
 /* #IPID# is a template to find&replace */
 #define IPID_TEMPLATE "#IPID#"
+#define MAXPAYLOADSIZE_TEMPLATE "#MAXPAYLOADSIZE#"
 #define FILTER_STRING_TEMPLATE \
-        "(tcp and !impostor and !loopback and " \
+        "(tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and " \
         "((inbound and (" \
          "(" \
           "(" \
@@ -169,6 +170,7 @@ static struct option long_options[] = {
     {"wrong-seq",   no_argument,       0,  ')' },
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
+    {"max-payload", optional_argument, 0,  '|' },
     {0,             0,                 0,   0  }
 };
 
@@ -178,7 +180,7 @@ static char *filter_passive_string = NULL;
 static void add_filter_str(int proto, int port) {
     const char *udp = " or (udp and !impostor and !loopback and " \
                       "(udp.SrcPort == %d or udp.DstPort == %d))";
-    const char *tcp = " or (tcp and !impostor and !loopback and " \
+    const char *tcp = " or (tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and " \
                       "(tcp.SrcPort == %d or tcp.DstPort == %d))";
 
     char *current_filter = filter_string;
@@ -212,11 +214,25 @@ static void add_ip_id_str(int id) {
     filter_passive_string = newstr;
 }
 
-static void finalize_filter_strings() {
+static void add_maxpayloadsize_str(unsigned short maxpayload) {
     char *newstr;
+    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu : true)";
+    char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
-    newstr = repl_str(filter_string, IPID_TEMPLATE, "");
+    sprintf(addfilter, maxpayloadsize_str, maxpayload);
+
+    newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
+    filter_string = newstr;
+}
+
+static void finalize_filter_strings() {
+    char *newstr, *newstr2;
+
+    newstr2 = repl_str(filter_string, IPID_TEMPLATE, "");
+    newstr = repl_str(newstr2, MAXPAYLOADSIZE_TEMPLATE, "");
+    free(filter_string);
+    free(newstr2);
     filter_string = newstr;
 
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
@@ -558,6 +574,7 @@ int main(int argc, char *argv[]) {
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
     unsigned int current_fragment_size = 0;
+    unsigned short max_payload_size = 0;
     BYTE should_send_fake = 0;
     BYTE ttl_of_fake_packet = 0;
     BYTE ttl_min_nhops = 0;
@@ -845,6 +862,14 @@ int main(int argc, char *argv[]) {
                 do_fragment_http_persistent = 1;
                 do_fragment_http_persistent_nowait = 1;
                 break;
+            case '|': // --max-payload
+                if (!optarg && argv[optind] && argv[optind][0] != '-')
+                    optarg = argv[optind];
+                if (optarg)
+                    max_payload_size = atousi(optarg, "Max payload size parameter error!");
+                if (!max_payload_size)
+                    max_payload_size = 1200;
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -888,9 +913,13 @@ int main(int argc, char *argv[]) {
                 " --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the\n"
                 "                          reversed order. Works with the websites which could not handle segmented\n"
                 "                          HTTPS TLS ClientHello (because they receive the TCP flow \"combined\").\n"
-                "\n"
-                "\n"
-                "LEGACY modesets:\n"
+                " --max-payload [value]    packets with TCP payload data more than [value] won't be processed.\n"
+                "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
+                "                          (like file transfers) in already established sessions.\n"
+                "                          May skip some huge HTTP requests from being processed.\n"
+                "                          Default (if set): --max-payload 1200.\n"
+                "\n");
+                puts("LEGACY modesets:\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)\n"
                 " -2          -p -r -s -f 2 -k 2 -n -e 40 (better speed for HTTPS yet still compatible)\n"
                 " -3          -p -r -s -e 40 (better speed for HTTP and HTTPS)\n"
@@ -935,7 +964,8 @@ int main(int argc, char *argv[]) {
            "Allow missing SNI: %d\n"                /* 15 */
            "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 16 */
            "Fake requests, wrong checksum: %d\n"    /* 17 */
-           "Fake requests, wrong SEQ/ACK: %d\n",    /* 18 */
+           "Fake requests, wrong SEQ/ACK: %d\n"     /* 18 */
+           "Max payload size: %hu\n",               /* 19 */
            do_passivedpi,                                         /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
@@ -955,7 +985,8 @@ int main(int argc, char *argv[]) {
                ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0,
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
            do_wrong_chksum, /* 17 */
-           do_wrong_seq     /* 18 */
+           do_wrong_seq,    /* 18 */
+           max_payload_size /* 19 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
@@ -970,8 +1001,10 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    puts("\nOpening filter");
+    if (max_payload_size)
+        add_maxpayloadsize_str(max_payload_size);
     finalize_filter_strings();
+    puts("\nOpening filter");
     filter_num = 0;
 
     if (do_passivedpi) {
