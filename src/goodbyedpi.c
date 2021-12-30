@@ -417,7 +417,7 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
                 for (int i=0; i<hnlen; i++) {
                     if (!( (hnaddr[i] >= '1' && hnaddr[i] <= '9') ||
                          (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
-                         hnaddr[i] == '.'))
+                         hnaddr[i] == '.' || hnaddr[i] == '-'))
                     {
                         return FALSE;
                     }
