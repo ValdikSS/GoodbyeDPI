@@ -33,7 +33,7 @@ endif
 
 .PHONY: default all clean
 
-default: manifest $(TARGET)
+default: $(TARGET)
 all: default
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c utils/*.c)) goodbyedpi-rc.o
@@ -42,7 +42,7 @@ HEADERS = $(wildcard *.h utils/*.h)
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-manifest:
+goodbyedpi-rc.o:
 	$(CCWINDRES) goodbyedpi-rc.rc goodbyedpi-rc.o
 
 .PRECIOUS: $(TARGET) $(OBJECTS)
