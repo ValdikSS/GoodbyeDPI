@@ -309,6 +309,7 @@ static HANDLE init(char *filter, UINT64 flags) {
 
 static int deinit(HANDLE handle) {
     if (handle) {
+        WinDivertShutdown(handle, WINDIVERT_SHUTDOWN_BOTH);
         WinDivertClose(handle);
         return TRUE;
     }
