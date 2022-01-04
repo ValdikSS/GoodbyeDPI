@@ -929,8 +929,8 @@ int main(int argc, char *argv[]) {
                 " -4          -p -r -s (best speed)"
                 "\n"
                 "Modern modesets (more stable, more compatible, faster):\n"
-                " -5          -f 2 -e 2 --auto-ttl --reverse-frag (this is the default)\n"
-                " -6          -f 2 -e 2 --wrong-seq --reverse-frag\n");
+                " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)\n"
+                " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n");
                 exit(EXIT_FAILURE);
         }
     }
