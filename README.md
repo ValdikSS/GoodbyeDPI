@@ -66,6 +66,7 @@ Usage: goodbyedpi.exe [OPTION...]
                           Use this option to reduce CPU usage by skipping huge amount of data
                           (like file transfers) in already established sessions.
                           May skip some huge HTTP requests from being processed.
+                          Default (if set): --max-payload 1200.
 
 
 LEGACY modesets:
