@@ -44,12 +44,13 @@ Usage: goodbyedpi.exe [OPTION...]
                           This option can be supplied multiple times.
  --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.
  --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.
-                          DANGEROUS! May break websites in unexpected ways. Use with care.
+                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).
  --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease
                           it based on a distance. If the distance is shorter than a2, TTL is decreased
                           by a2. If it's longer, (a1; a2) scale is used with the distance as a weight.
                           If the resulting TTL is more than m(ax), set it to m.
                           Default (if set): --auto-ttl 1-4-10. Also sets --min-ttl 3.
+                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).
  --min-ttl     <value>    minimum TTL distance (128/64 - TTL) for which to send Fake Request
                           in --set-ttl and --auto-ttl modes.
  --wrong-chksum           activate Fake Request Mode and send it with incorrect TCP checksum.
