@@ -870,7 +870,7 @@ int main(int argc, char *argv[]) {
                     optarg = argv[optind];
                 if (optarg)
                     max_payload_size = atousi(optarg, "Max payload size parameter error!");
-                if (!max_payload_size)
+                else
                     max_payload_size = 1200;
                 break;
             default:
