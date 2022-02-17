@@ -30,7 +30,7 @@ int service_register(int argc, char *argv[])
      */
     if (!service_argc && !service_argv) {
         service_argc = argc;
-        service_argv = malloc(sizeof(void*) * (size_t)argc);
+        service_argv = calloc(sizeof(void*), (size_t)(argc + 1));
         for (i = 0; i < argc; i++) {
             service_argv[i] = strdup(argv[i]);
         }
