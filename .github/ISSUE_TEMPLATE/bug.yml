@@ -1,19 +1,35 @@
 name: Bug Report / Сообщение об ошибке
-description: File a bug report / Сообщить об ошибке в проекте
+description: File a bug report / Сообщить об ошибке в программе
 
 body:
   - type: markdown
     attributes:
       value: |
-        Please pay some attention!
-        GoodbyeDPI does not guarantee to work on your ISP on 100% or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it.
-        Please report software bugs, such as: website incompatibility (if the website works without GoodbyeDPI but breaks with GoobyeDPI enabled), antivirus incompatibility, DNS redirection problems, incorrect packet handling, and other software issues.
-        Please make sure to check other opened and closed issues, it could be your question or issue has been already discussed.
+        **USE THIS FORM ONLY FOR BUGS**
+        GoodbyeDPI does not guarantee to work with your ISP for every blocked website or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it here.
 
-        Пожалуйста, прочтите!
-        GoodbyeDPI не гарантирует ни 100% работу с вашим провайдером, ни работу вообще. Если GoodbyeDPI не разблокирует доступ к некоторым или всем веб-сайтам, вероятнее всего, это не программная ошибка, и не стоит о ней сообщать здесь.
-        Сообщайте только об ошибках в программе, таких как: некорректная работа с веб-сайтами (когда веб-сайт работает без GoodbyeDPI, но ломается с GoodbyeDPI), несовместимость с антивирусами, проблемы с перенаправлением DNS, некорректная обработка пакетов, и другие проблемы.
-        Также посмотрите другие открытые и закрытые баги. Возможно, ваш вопрос или проблема уже обсуждались.
+        Please only report software bugs, such as:
+          * program crash
+          * incorrect network packet handling
+          * antivirus incompatibility
+          * DNS redirection problems
+          * other software 
+
+        Please make sure to check other opened and closed issues, it could be your bug has been reported already.
+        For questions, or if in doubt, [use NTC.party forum](https://ntc.party/c/community-software/goodbyedpi).
+
+        **ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ**
+        GoodbyeDPI не гарантирует ни 100% работу с вашим провайдером, ни работу с каждым заблокированным сайтом. Если GoodbyeDPI не разблокирует доступ к некоторым или всем веб-сайтам, вероятнее всего, это не программная ошибка, и не стоит о ней сообщать здесь.
+
+        Пожалуйста, сообщайте только об ошибках в программе, таких как:
+          * падение программы
+          * некорректная обработка сетевых пакетов
+          * несовместимость с антивирусами
+          * проблемы с перенаправлением DNS
+          * другие ошибки в программе
+
+        Также посмотрите другие открытые и закрытые баги. Возможно, ошибка уже обсуждалась или исправлена.
+        Для вопросов, а также в случае сомнений в определении бага, обращайтесь [на форум NTC.party](https://ntc.party/c/community-software/goodbyedpi).
   - type: input
     id: os
     attributes:
@@ -35,8 +51,8 @@ body:
   - type: textarea
     id: what-happened
     attributes:
-      label: Describe the issue / Опишите проблему
-      description: A clear and concise description of what the bug is / Подробно опишите, в чём заключается проблема
+      label: Describe the bug / Опишите ошибку программы
+      description: A clear and concise description of what the bug is / Подробно опишите, в чём заключается ошибка
       placeholder: Attach the screenshots for clarity / При необходимости приложите скриншоты
     validations:
       required: true
