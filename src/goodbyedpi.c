@@ -216,7 +216,8 @@ static void add_ip_id_str(int id) {
 
 static void add_maxpayloadsize_str(unsigned short maxpayload) {
     char *newstr;
-    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu : true)";
+    /* 0x47455420 is "GET ", 0x504F5354 is "POST", big endian. */
+    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
     char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
     sprintf(addfilter, maxpayloadsize_str, maxpayload);
