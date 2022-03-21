@@ -70,19 +70,21 @@ static int send_fake_data(const HANDLE w_filter,
     memcpy(&addr_new, addr, sizeof(WINDIVERT_ADDRESS));
     memcpy(packet_fake, pkt, packetLen);
 
-    addr_new.PseudoTCPChecksum = 0;
-    addr_new.PseudoIPChecksum = 0;
+    addr_new.TCPChecksum = 0;
+    addr_new.IPChecksum = 0;
 
     if (!is_ipv6) {
         // IPv4 TCP Data packet
         if (!WinDivertHelperParsePacket(packet_fake, packetLen, &ppIpHdr,
-            NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen))
+            NULL, NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen,
+            NULL, NULL))
             return 1;
     }
     else {
         // IPv6 TCP Data packet
         if (!WinDivertHelperParsePacket(packet_fake, packetLen, NULL,
-            &ppIpV6Hdr, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen))
+            &ppIpV6Hdr, NULL, NULL, NULL, &ppTcpHdr, NULL, &packet_data, &packet_dataLen,
+            NULL, NULL))
             return 1;
     }
 
@@ -126,12 +128,12 @@ static int send_fake_data(const HANDLE w_filter,
         // ...and damage it
         ppTcpHdr->Checksum = htons(ntohs(ppTcpHdr->Checksum) - 1);
     }
-    //printf("Pseudo checksum: %d\n", addr_new.PseudoTCPChecksum);
+    //printf("Pseudo checksum: %d\n", addr_new.TCPChecksum);
 
     WinDivertSend(
         w_filter, packet_fake,
         packetLen_new,
-        &addr_new, NULL
+        NULL, &addr_new
     );
     debug("Fake packet: OK");
 

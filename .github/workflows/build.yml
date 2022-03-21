@@ -6,9 +6,10 @@ on:
       - 'src/**'
 
 env:
-  WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-1.4.3-A.zip
-  WINDIVERT_NAME: WinDivert-1.4.3-A.zip
-  WINDIVERT_SHA256: 4084bc3931f31546d375ed89e3f842776efa46f321ed0adcd32d3972a7d02566
+  WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-2.2.0-A.zip
+  WINDIVERT_NAME: WinDivert-2.2.0-A.zip
+  WINDIVERT_BASENAME: WinDivert-2.2.0-A
+  WINDIVERT_SHA256: 2a7630aac0914746fbc565ac862fa096e3e54233883ac52d17c83107496b7a7f
 
 jobs:
   build:
@@ -46,14 +47,14 @@ jobs:
       - name: Compile x86_64
         run: >
           cd src && make clean &&
-          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../WinDivert-1.4.3-A/include WINDIVERTLIBS=../WinDivert-1.4.3-A/x86_64 -j4
+          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4
       
       - name: Prepare x86_64 directory
         run: |
           mkdir goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
-          cp src/goodbyedpi.exe WinDivert-1.4.3-A/x86_64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
+          cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
 
-      - name: Upload output file x86_64 (64 bit)
+      - name: Upload output file x86_64
         uses: actions/upload-artifact@v2
         with:
           name: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
@@ -62,12 +63,12 @@ jobs:
       - name: Compile i686
         run: >
           cd src && make clean &&
-          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../WinDivert-1.4.3-A/include WINDIVERTLIBS=../WinDivert-1.4.3-A/x86 -j4
+          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x86 -j4
 
       - name: Prepare x86 directory
         run: |
           mkdir goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
-          cp src/goodbyedpi.exe WinDivert-1.4.3-A/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
+          cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86
         uses: actions/upload-artifact@v2
