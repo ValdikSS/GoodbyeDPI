@@ -119,8 +119,8 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
             } \
             else if (ttl_min_nhops) { \
                 /* If not Auto TTL mode but --min-ttl is set */ \
-                if (tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops, 0)) { \
-                    /* Send only if nhops > min_ttl */ \
+                if (!tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops, 0)) { \
+                    /* Send only if nhops >= min_ttl */ \
                     should_send_fake = 0; \
                 } \
             } \
