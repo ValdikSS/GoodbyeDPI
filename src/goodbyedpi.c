@@ -807,6 +807,7 @@ int main(int argc, char *argv[]) {
                 do_allow_no_sni = 1;
                 break;
             case '$': // --set-ttl
+                do_auto_ttl = auto_ttl_1 = auto_ttl_2 = auto_ttl_max = 0;
                 do_fake_packet = 1;
                 ttl_of_fake_packet = atoub(optarg, "Set TTL parameter error!");
                 break;
