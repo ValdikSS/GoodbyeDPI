@@ -987,7 +987,7 @@ int main(int argc, char *argv[]) {
            do_dnsv4_redirect,                  /* 13 */
            do_dnsv6_redirect,                  /* 14 */
            do_allow_no_sni,                    /* 15 */
-           ttl_of_fake_packet ? "fixed" : (do_auto_ttl ? "auto" : "disabled"),  /* 16 */
+           do_auto_ttl ? "auto" : (do_fake_packet ? "fixed" : "disabled"),  /* 16 */
                ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0,
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
            do_wrong_chksum, /* 17 */
