@@ -474,7 +474,7 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
                         PWINDIVERT_TCPHDR ppTcpHdr,
                         unsigned int fragment_size, int step) {
     char packet_bak[MAX_PACKET_SIZE];
-    memcpy(&packet_bak, packet, packetLen);
+    memcpy(packet_bak, packet, packetLen);
     UINT orig_packetLen = packetLen;
 
     if (fragment_size >= packet_dataLen) {
@@ -531,7 +531,7 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
         packetLen,
         NULL, &addr
     );
-    memcpy(packet, &packet_bak, orig_packetLen);
+    memcpy(packet, packet_bak, orig_packetLen);
     //printf("Sent native fragment of %d size (step%d)\n", packetLen, step);
 }
 
@@ -1147,7 +1147,7 @@ int main(int argc, char *argv[]) {
                             char lsni[HOST_MAXLEN + 1] = {0};
                             extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
-                            memcpy(&lsni, host_addr, host_len);
+                            memcpy(lsni, host_addr, host_len);
                             printf("Blocked HTTPS website SNI: %s\n", lsni);
 #endif
                             if (do_fake_packet) {
@@ -1182,7 +1182,7 @@ int main(int argc, char *argv[]) {
                         host_len = hdr_value_len;
 #ifdef DEBUG
                         char lhost[HOST_MAXLEN + 1] = {0};
-                        memcpy(&lhost, host_addr, host_len);
+                        memcpy(lhost, host_addr, host_len);
                         printf("Blocked HTTP website Host: %s\n", lhost);
 #endif
 
