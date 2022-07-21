@@ -19,7 +19,7 @@ CFLAGS = -std=c99 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -Wnull-dereference -Warray-bounds=2 -Wimplicit-fallthrough=3 \
          -Wstringop-overflow=4 \
          -Wformat-signedness -Wstrict-overflow=2 -Wcast-align=strict \
-         -Wfloat-equal -Wcast-align -Wsign-conversion \
+         -Wfloat-equal -Wcast-align -Wsign-conversion -Wno-stringop-overflow -Wno-stringop-overread \
          #-fstack-protector-strong
 LDFLAGS = -fstack-protector -Wl,-O1,-pie,--dynamicbase,--nxcompat,--sort-common,--as-needed \
 -Wl,--image-base,0x140000000 -Wl,--disable-auto-image-base
