@@ -140,12 +140,13 @@ Modify them according to your own needs.
 
 # Similar projects
 
-- **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for Linux).
-- **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows).
-- **[DPITunnel](https://github.com/zhenyolka/DPITunnel)** by @zhenyolka (for Android).
-- **[PowerTunnel](https://github.com/krlvm/PowerTunnel)** by @krlvm (for Windows, MacOS and Linux).
-- **[PowerTunnel for Android](https://github.com/krlvm/PowerTunnel-Android)** by @krlvm (for Android).
+- **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for Linux)
+- **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows)
+- **[DPITunnel](https://github.com/zhenyolka/DPITunnel)** by @zhenyolka (for Android)
+- **[PowerTunnel](https://github.com/krlvm/PowerTunnel)** by @krlvm (for Windows, MacOS and Linux)
+- **[PowerTunnel for Android](https://github.com/krlvm/PowerTunnel-Android)** by @krlvm (for Android)
 - **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** by @xvzc (for macOS and Linux)
+- **[GhosTCP](https://github.com/macronut/ghostcp)** by @macronut (for Windows)
 
 # Kudos
 
