@@ -142,7 +142,8 @@ Modify them according to your own needs.
 
 - **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for Linux)
 - **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows)
-- **[DPITunnel](https://github.com/zhenyolka/DPITunnel)** by @zhenyolka (for Android)
+- **[DPI Tunnel CLI](https://github.com/zhenyolka/DPITunnel-cli)** by @zhenyolka (for Linux and routers)
+- **[DPI Tunnel for Android](https://github.com/zhenyolka/DPITunnel-android)** by @zhenyolka (for Android)
 - **[PowerTunnel](https://github.com/krlvm/PowerTunnel)** by @krlvm (for Windows, MacOS and Linux)
 - **[PowerTunnel for Android](https://github.com/krlvm/PowerTunnel-Android)** by @krlvm (for Android)
 - **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** by @xvzc (for macOS and Linux)
