@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/**'
+  workflow_dispatch:
 
 env:
   WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-2.2.0-A.zip
