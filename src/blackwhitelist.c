@@ -16,13 +16,14 @@ typedef struct blackwhitelist_record {
     UT_hash_handle hh;   /* makes this structure hashable */
 } blackwhitelist_record_t;
 
-static blackwhitelist_record_t *blackwhitelist = NULL;
+static blackwhitelist_record_t *blacklist = NULL;
+static blackwhitelist_record_t *whitelist = NULL;
 
-static int check_get_hostname(const char *host) {
+static int check_get_hostname(const char *host, blackwhitelist_record_t **list) {
     blackwhitelist_record_t *tmp_record = NULL;
-    if (!blackwhitelist) return FALSE;
+    if (!*list) return FALSE;
 
-    HASH_FIND_STR(blackwhitelist, host, tmp_record);
+    HASH_FIND_STR(*list, host, tmp_record);
     if (tmp_record) {
         debug("check_get_hostname found host\n");
         return TRUE;
@@ -31,17 +32,17 @@ static int check_get_hostname(const char *host) {
     return FALSE;
 }
 
-static int add_hostname(const char *host) {
+static int add_hostname(const char *host, blackwhitelist_record_t **list) {
     if (!host)
         return FALSE;
 
     blackwhitelist_record_t *tmp_record = malloc(sizeof(blackwhitelist_record_t));
     char *host_c = NULL;
 
-    if (!check_get_hostname(host)) {
+    if (!check_get_hostname(host, list)) {
         host_c = strdup(host);
         tmp_record->host = host_c;
-        HASH_ADD_KEYPTR(hh, blackwhitelist, tmp_record->host,
+        HASH_ADD_KEYPTR(hh, *list, tmp_record->host,
                         strlen(tmp_record->host), tmp_record);
         debug("Added host %s\n", host_c);
         return TRUE;
@@ -53,7 +54,7 @@ static int add_hostname(const char *host) {
     return FALSE;
 }
 
-int blackwhitelist_load_list(const char *filename) {
+static int blackwhitelist_load_list(const char *filename, blackwhitelist_record_t **list) {
     char *line = malloc(HOST_MAXLEN + 1);
     size_t linelen = HOST_MAXLEN + 1;
     int cnt = 0;
@@ -74,17 +75,25 @@ int blackwhitelist_load_list(const char *filename) {
             printf("WARNING: host %s is less than 3 bytes, skipping\n", line);
             continue;
         }
-        if (add_hostname(line))
+        if (add_hostname(line, list))
             cnt++;
     }
     free(line);
-    if (!blackwhitelist) return FALSE;
+    if (!*list) return FALSE;
     printf("Loaded %d hosts from file %s\n", cnt, filename);
     fclose(fp);
     return TRUE;
 }
 
-int blackwhitelist_check_hostname(const char *host_addr, size_t host_len) {
+int blackwhitelist_load_blacklist(const char *filename) {
+    return blackwhitelist_load_list(filename, &blacklist);
+}
+
+int blackwhitelist_load_whitelist(const char *filename) {
+    return blackwhitelist_load_list(filename, &whitelist);
+}
+
+static int blackwhitelist_check_hostname(const char *host_addr, size_t host_len, blackwhitelist_record_t **list) {
     char current_host[HOST_MAXLEN + 1];
     char *tokenized_host = NULL;
 
@@ -94,17 +103,25 @@ int blackwhitelist_check_hostname(const char *host_addr, size_t host_len) {
         current_host[host_len] = '\0';
     }
 
-    if (check_get_hostname(current_host))
+    if (check_get_hostname(current_host, list))
             return TRUE;
 
     tokenized_host = strchr(current_host, '.');
     while (tokenized_host != NULL && tokenized_host < (current_host + HOST_MAXLEN)) {
         /* Search hostname only if there is next token */
-        if (strchr(tokenized_host + 1, '.') && check_get_hostname(tokenized_host + 1))
+        if (strchr(tokenized_host + 1, '.') && check_get_hostname(tokenized_host + 1, list))
             return TRUE;
         tokenized_host = strchr(tokenized_host + 1, '.');
     }
 
     debug("____blackwhitelist_check_hostname FALSE: host %s\n", current_host);
     return FALSE;
+}
+
+int blackwhitelist_check_hostname_blacklist(const char *host_addr, size_t host_len) {
+    return blackwhitelist_check_hostname(host_addr, host_len, &blacklist);
+}
+
+int blackwhitelist_check_hostname_whitelist(const char *host_addr, size_t host_len) {
+    return blackwhitelist_check_hostname(host_addr, host_len, &whitelist);
 }
