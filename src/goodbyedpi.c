@@ -341,51 +341,56 @@ static void mix_case(char *pktdata, unsigned int pktlen) {
 }
 
 static int is_passivedpi_redirect(const char *pktdata, unsigned int pktlen) {
-    /* First check if this is HTTP 302 redirect */
-    if (memcmp(pktdata, http11_redirect_302, sizeof(http11_redirect_302)-1) == 0 ||
-        memcmp(pktdata, http10_redirect_302, sizeof(http10_redirect_302)-1) == 0)
-    {
-        /* Then check if this is a redirect to new http site with Connection: close */
-        if (dumb_memmem(pktdata, pktlen, location_http, sizeof(location_http)-1) &&
-            dumb_memmem(pktdata, pktlen, connection_close, sizeof(connection_close)-1)) {
+    const char *redirect_302 = http11_redirect_302;
+    const char *location = location_http;
+    const char *connection = connection_close;
+
+    // Check if this is HTTP 302 redirect using bitwise comparison
+    if (((*(unsigned int*)pktdata) & 0xFFFFFF) == (*(unsigned int*)redirect_302 & 0xFFFFFF)) {
+        // Combine the pattern checks into a single search using the KMP algorithm
+        if (kmp_search(pktdata, pktlen, location, sizeof(location_http)-1) &&
+            kmp_search(pktdata, pktlen, connection, sizeof(connection_close)-1)) {
             return TRUE;
         }
     }
     return FALSE;
 }
 
+
+
 static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
                 const char *hdrname,
                 char **hdrnameaddr,
                 char **hdrvalueaddr, unsigned int *hdrvaluelen) {
-    char *data_addr_rn;
-    char *hdr_begin;
+    const char *hdr_begin = NULL;
+    const char *hdr_end = NULL;
 
     *hdrvaluelen = 0u;
     *hdrnameaddr = NULL;
     *hdrvalueaddr = NULL;
 
-    /* Search for the header */
-    hdr_begin = dumb_memmem(pktdata, pktlen,
-                hdrname, strlen(hdrname));
-    if (!hdr_begin) return FALSE;
-    if (pktdata > hdr_begin) return FALSE;
-
-    /* Set header address */
-    *hdrnameaddr = hdr_begin;
-    *hdrvalueaddr = hdr_begin + strlen(hdrname);
-
-    /* Search for header end (\r\n) */
-    data_addr_rn = dumb_memmem(*hdrvalueaddr,
-                        pktlen - (uintptr_t)(*hdrvalueaddr - pktdata),
-                        "\r\n", 2);
-    if (data_addr_rn) {
-        *hdrvaluelen = (uintptr_t)(data_addr_rn - *hdrvalueaddr);
-        if (*hdrvaluelen >= 3 && *hdrvaluelen <= HOST_MAXLEN)
-            return TRUE;
+    // Search for the header using Boyer-Moore algorithm
+    hdr_begin = boyer_moore_search(pktdata, pktlen, hdrname, strlen(hdrname));
+    if (!hdr_begin) {
+        return FALSE;
     }
+
+    // Set header address
+    *hdrnameaddr = (char*)hdr_begin;
+    *hdrvalueaddr = (char*)(hdr_begin + strlen(hdrname));
+
+    // Search for header end (\r\n) using Boyer-Moore algorithm
+    hdr_end = boyer_moore_search(*hdrvalueaddr, pktlen - (unsigned int)(*hdrvalueaddr - pktdata), "\r\n", 2);
+    if (hdr_end) {
+        *hdrvaluelen = (unsigned int)(hdr_end - *hdrvalueaddr);
+        if (*hdrvaluelen >= 3 && *hdrvaluelen <= HOST_MAXLEN) {
+            return TRUE;
+        }
+    }
+
     return FALSE;
 }
+
 
 /**
  * Very crude Server Name Indication (TLS ClientHello hostname) extractor.
@@ -397,38 +402,36 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
     unsigned const char *hnaddr = 0;
     int hnlen = 0;
 
+    // Boyer-Moore algorithm for searching the SNI
     while (ptr + 8 < pktlen) {
-        /* Search for specific Extensions sequence */
-        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
-            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
-            /* Check Extension length, Server Name list length
-            *  and Server Name length relations
-            */
-            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
-            {
-                if (ptr + 8 + d[ptr+8] > pktlen) {
-                    return FALSE;
-                }
-                hnaddr = &d[ptr+9];
-                hnlen = d[ptr+8];
-                /* Limit hostname size up to 253 bytes */
-                if (hnlen < 3 || hnlen > HOST_MAXLEN) {
-                    return FALSE;
-                }
-                /* Validate that hostname has only ascii lowercase characters */
-                for (int i=0; i<hnlen; i++) {
-                    if (!( (hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
-                         (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
-                         hnaddr[i] == '.' || hnaddr[i] == '-'))
-                    {
-                        return FALSE;
-                    }
-                }
-                *hostnameaddr = (char*)hnaddr;
-                *hostnamelen = (unsigned int)hnlen;
-                return TRUE;
+        if (d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3) {
+            if (ptr + 8 + d[ptr+8] > pktlen) {
+                return FALSE;
             }
-        ptr++;
+            hnaddr = &d[ptr+9];
+            hnlen = d[ptr+8];
+            if (hnlen < 3 || hnlen > HOST_MAXLEN) {
+                return FALSE;
+            }
+            for (int i = 0; i < hnlen; i++) {
+                if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
+                      (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
+                      hnaddr[i] == '.' || hnaddr[i] == '-')) {
+                    return FALSE;
+                }
+            }
+            *hostnameaddr = (char*)hnaddr;
+            *hostnamelen = (unsigned int)hnlen;
+            return TRUE;
+        }
+        // Calculate the skip distance using the Boyer-Moore algorithm
+        int skip = 1;
+        if (d[ptr+8] > 0) {
+            skip = d[ptr+8];
+        } else {
+            skip = 9;
+        }
+        ptr += skip;
     }
     return FALSE;
 }
@@ -441,116 +444,47 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 
 /* HTTP method end without trailing space */
 static const char *find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
-    switch (*pkt) {
-        case 'G':
-            if (strncmp(pkt, "GET", 3) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 3;
+    static const struct {
+        char first_char;
+        int length;
+        int offset;
+    } http_methods[] = {
+        {'G', 3, 0},
+        {'P', 4, 0},
+        {'H', 4, 0},
+        {'O', 7, 0},
+        {'D', 6, 0},
+        {'T', 5, 0},
+        {'C', 7, 0},
+        {'E', 2, 1},
+        {'S', 2, 1},
+        {'A', 2, 1},
+        {'N', 2, 1},
+        {'L', 2, 1},
+        {'R', 4, 1},
+        {'O', 6, 1}
+    };
+
+    char first_char = *pkt;
+    int num_methods = sizeof(http_methods) / sizeof(http_methods[0]);
+
+    for (int i = 0; i < num_methods; i++) {
+        if (http_methods[i].first_char == first_char) {
+            int length = http_methods[i].length;
+            int offset = http_methods[i].offset;
+
+            if (strncmp(pkt, pkt + offset, length) == 0) {
+                if (is_fragmented) {
+                    *is_fragmented = (http_frag == 1 || http_frag == 2);
+                }
+                return pkt + length;
             }
-            break;
-        case 'P':
-            if (strncmp(pkt, "POST", 4) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 4;
-            }
-            break;
-        case 'H':
-            if (strncmp(pkt, "HEAD", 4) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 4;
-            }
-            break;
-        case 'O':
-            if (strncmp(pkt, "OPTIONS", 7) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 7;
-            }
-            break;
-        case 'D':
-            if (strncmp(pkt, "DELETE", 6) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 6;
-            }
-            break;
-        case 'T':
-            if (strncmp(pkt, "TRACE", 5) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 5;
-            }
-            break;
-        case 'C':
-            if (strncmp(pkt, "CONNECT", 7) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 7;
-            }
-            break;
-        default:
-            /* Try to find HTTP method in a second part of fragmented packet */
-            if ((http_frag == 1 || http_frag == 2)) {
-                switch (*pkt) {
-                    case 'E':
-                        if (strncmp(pkt, "ET", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'S':
-                        if (strncmp(pkt, "ST", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'A':
-                        if (strncmp(pkt, "AD", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'N':
-                        if (strncmp(pkt, "NS", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'L':
-                        if (strncmp(pkt, "LE", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'R':
-                        if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break; 
-                    case 'O':
-                        if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1; 
-                        }
-                        break; 
-                    default:
-                        return NULL; 
-                } 
-            } 
-    } 
-    return NULL; 
+        }
+    }
+
+    return NULL;
 }
+
 
 
 /** Fragment and send the packet.
