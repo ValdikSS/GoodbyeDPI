@@ -440,27 +440,118 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 }
 
 /* HTTP method end without trailing space */
-static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
-    unsigned int i;
-    for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
-        if (memcmp(pkt, http_methods[i], strlen(http_methods[i])) == 0) {
-            if (is_fragmented)
-                *is_fragmented = 0;
-            return (char*)pkt + strlen(http_methods[i]) - 1;
-        }
-        /* Try to find HTTP method in a second part of fragmented packet */
-        if ((http_frag == 1 || http_frag == 2) &&
-            memcmp(pkt, http_methods[i] + http_frag,
-                   strlen(http_methods[i]) - http_frag) == 0
-           )
-        {
-            if (is_fragmented)
-                *is_fragmented = 1;
-            return (char*)pkt + strlen(http_methods[i]) - http_frag - 1;
-        }
-    }
-    return NULL;
+static const char *find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
+    switch (*pkt) {
+        case 'G':
+            if (strncmp(pkt, "GET", 3) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 3;
+            }
+            break;
+        case 'P':
+            if (strncmp(pkt, "POST", 4) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 4;
+            }
+            break;
+        case 'H':
+            if (strncmp(pkt, "HEAD", 4) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 4;
+            }
+            break;
+        case 'O':
+            if (strncmp(pkt, "OPTIONS", 7) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 7;
+            }
+            break;
+        case 'D':
+            if (strncmp(pkt, "DELETE", 6) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 6;
+            }
+            break;
+        case 'T':
+            if (strncmp(pkt, "TRACE", 5) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 5;
+            }
+            break;
+        case 'C':
+            if (strncmp(pkt, "CONNECT", 7) == 0) {
+                if (is_fragmented)
+                    *is_fragmented = 0;
+                return pkt + 7;
+            }
+            break;
+        default:
+            /* Try to find HTTP method in a second part of fragmented packet */
+            if ((http_frag == 1 || http_frag == 2)) {
+                switch (*pkt) {
+                    case 'E':
+                        if (strncmp(pkt, "ET", http_frag) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break;
+                    case 'S':
+                        if (strncmp(pkt, "ST", http_frag) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break;
+                    case 'A':
+                        if (strncmp(pkt, "AD", http_frag) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break;
+                    case 'N':
+                        if (strncmp(pkt, "NS", http_frag) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break;
+                    case 'L':
+                        if (strncmp(pkt, "LE", http_frag) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break;
+                    case 'R':
+                        if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1;
+                        }
+                        break; 
+                    case 'O':
+                        if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
+                            if (is_fragmented)
+                                *is_fragmented = 1;
+                            return pkt + http_frag - 1; 
+                        }
+                        break; 
+                    default:
+                        return NULL; 
+                } 
+            } 
+    } 
+    return NULL; 
 }
+
 
 /** Fragment and send the packet.
  *
@@ -484,40 +575,36 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
             return;
     }
 
-    if (step == 0) {
-        if (packet_v4)
-            ppIpHdr->Length = htons(
-                ntohs(ppIpHdr->Length) -
-                packet_dataLen + fragment_size
-            );
-        else if (packet_v6)
-            ppIpV6Hdr->Length = htons(
-                ntohs(ppIpV6Hdr->Length) -
-                packet_dataLen + fragment_size
-            );
-        //printf("step0 (%d:%d), pp:%d, was:%d, now:%d\n",
-        //                packet_v4, packet_v6, ntohs(ppIpHdr->Length),
-        //                packetLen, packetLen - packet_dataLen + fragment_size);
-        packetLen = packetLen - packet_dataLen + fragment_size;
-    }
+    switch(step) {
+        case 0:
+            if (packet_v4)
+                ppIpHdr->Length = htons(
+                    ntohs(ppIpHdr->Length) -
+                    packet_dataLen + fragment_size
+                );
+            else if (packet_v6)
+                ppIpV6Hdr->Length = htons(
+                    ntohs(ppIpV6Hdr->Length) -
+                    packet_dataLen + fragment_size
+                );
+            packetLen = packetLen - packet_dataLen + fragment_size;
+            break;
+        case 1:
+            if (packet_v4)
+                ppIpHdr->Length = htons(
+                    ntohs(ppIpHdr->Length) - fragment_size
+                );
+            else if (packet_v6)
+                ppIpV6Hdr->Length = htons(
+                    ntohs(ppIpV6Hdr->Length) - fragment_size
+                );
+            memmove(packet_data,
+                    (char*)packet_data + fragment_size,
+                    packet_dataLen - fragment_size);
+            packetLen -= fragment_size;
 
-    else if (step == 1) {
-        if (packet_v4)
-            ppIpHdr->Length = htons(
-                ntohs(ppIpHdr->Length) - fragment_size
-            );
-        else if (packet_v6)
-            ppIpV6Hdr->Length = htons(
-                ntohs(ppIpV6Hdr->Length) - fragment_size
-            );
-        //printf("step1 (%d:%d), pp:%d, was:%d, now:%d\n", packet_v4, packet_v6, ntohs(ppIpHdr->Length),
-        //                packetLen, packetLen - fragment_size);
-        memmove(packet_data,
-                (char*)packet_data + fragment_size,
-                packet_dataLen - fragment_size);
-        packetLen -= fragment_size;
-
-        ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + fragment_size);
+            ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + fragment_size);
+            break;
     }
 
     addr.IPChecksum = 0;
@@ -532,8 +619,8 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
         NULL, &addr
     );
     memcpy(packet, packet_bak, orig_packetLen);
-    //printf("Sent native fragment of %d size (step%d)\n", packetLen, step);
 }
+
 
 int main(int argc, char *argv[]) {
     static enum packet_type_e {
