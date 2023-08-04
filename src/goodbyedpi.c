@@ -178,34 +178,25 @@ static char *filter_string = NULL;
 static char *filter_passive_string = NULL;
 
 static void add_filter_str(int proto, int port) {
-    const char *udp = " or (udp and !impostor and !loopback and " \
-                      "(udp.SrcPort == %d or udp.DstPort == %d))";
-    const char *tcp = " or (tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and " \
-                      "(tcp.SrcPort == %d or tcp.DstPort == %d))";
+    const char *udp = " or (udp and !impostor and !loopback and (udp.SrcPort == %d or udp.DstPort == %d))";
+    const char *tcp = " or (tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and (tcp.SrcPort == %d or tcp.DstPort == %d))";
 
-    char *current_filter = filter_string;
-    size_t new_filter_size = strlen(current_filter) +
-            (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
+    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
     char *new_filter = malloc(new_filter_size);
 
-    strcpy(new_filter, current_filter);
-    if (proto == IPPROTO_UDP)
-        sprintf(new_filter + strlen(new_filter), udp, port, port);
-    else
-        sprintf(new_filter + strlen(new_filter), tcp, port, port);
+    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
 
+    free(filter_string);
     filter_string = new_filter;
-    free(current_filter);
 }
 
 static void add_ip_id_str(int id) {
-    char *newstr;
     const char *ipid = " or ip.Id == %d";
     char *addfilter = malloc(strlen(ipid) + 16);
 
     sprintf(addfilter, ipid, id);
 
-    newstr = repl_str(filter_string, IPID_TEMPLATE, addfilter);
+    char *newstr = repl_str(filter_string, IPID_TEMPLATE, addfilter);
     free(filter_string);
     filter_string = newstr;
 
@@ -215,25 +206,19 @@ static void add_ip_id_str(int id) {
 }
 
 static void add_maxpayloadsize_str(unsigned short maxpayload) {
-    char *newstr;
-    /* 0x47455420 is "GET ", 0x504F5354 is "POST", big endian. */
     const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
     char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
     sprintf(addfilter, maxpayloadsize_str, maxpayload);
 
-    newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
+    char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
     filter_string = newstr;
 }
 
 static void finalize_filter_strings() {
-    char *newstr, *newstr2;
-
-    newstr2 = repl_str(filter_string, IPID_TEMPLATE, "");
-    newstr = repl_str(newstr2, MAXPAYLOADSIZE_TEMPLATE, "");
+    char *newstr = repl_str(filter_string, IPID_TEMPLATE, "");
     free(filter_string);
-    free(newstr2);
     filter_string = newstr;
 
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
@@ -241,15 +226,11 @@ static void finalize_filter_strings() {
     filter_passive_string = newstr;
 }
 
-static char* dumb_memmem(const char* haystack, unsigned int hlen,
-                         const char* needle, unsigned int nlen)
-{
-    // naive implementation
+static char* dumb_memmem(const char* haystack, unsigned int hlen, const char* needle, unsigned int nlen) {
     if (nlen > hlen) return NULL;
-    size_t i;
-    for (i=0; i<hlen-nlen+1; i++) {
-        if (memcmp(haystack+i,needle,nlen)==0) {
-            return (char*)(haystack+i);
+    for (size_t i = 0; i < hlen - nlen + 1; i++) {
+        if (memcmp(haystack + i, needle, nlen) == 0) {
+            return (char*)(haystack + i);
         }
     }
     return NULL;
@@ -257,11 +238,9 @@ static char* dumb_memmem(const char* haystack, unsigned int hlen,
 
 unsigned short int atousi(const char *str, const char *msg) {
     long unsigned int res = strtoul(str, NULL, 10u);
-    enum {
-        limitValue=0xFFFFu
-    };
+    const unsigned short int limitValue = 0xFFFFu;
 
-    if(res > limitValue) {
+    if (res > limitValue) {
         puts(msg);
         exit(EXIT_FAILURE);
     }
@@ -270,16 +249,15 @@ unsigned short int atousi(const char *str, const char *msg) {
 
 BYTE atoub(const char *str, const char *msg) {
     long unsigned int res = strtoul(str, NULL, 10u);
-    enum {
-        limitValue=0xFFu
-    };
+    const BYTE limitValue = 0xFFu;
 
-    if(res > limitValue) {
+    if (res > limitValue) {
         puts(msg);
         exit(EXIT_FAILURE);
     }
     return (BYTE)res;
 }
+
 
 
 static HANDLE init(char *filter, UINT64 flags) {
@@ -330,15 +308,12 @@ static void sigint_handler(int sig __attribute__((unused))) {
 }
 
 static void mix_case(char *pktdata, unsigned int pktlen) {
-    unsigned int i;
-
     if (pktlen <= 0) return;
-    for (i = 0; i < pktlen; i++) {
-        if (i % 2) {
-            pktdata[i] = (char) toupper(pktdata[i]);
-        }
+    for (unsigned int i = 1; i < pktlen; i += 2) {
+        pktdata[i] = (char) toupper(pktdata[i]);
     }
 }
+
 
 static int is_passivedpi_redirect(const char *pktdata, unsigned int pktlen) {
     /* First check if this is HTTP 302 redirect */
