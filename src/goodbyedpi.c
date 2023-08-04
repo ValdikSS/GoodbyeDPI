@@ -393,45 +393,41 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
     unsigned int ptr = 0;
-    unsigned const char *d = (unsigned const char *)pktdata;
-    unsigned const char *hnaddr = 0;
+    const unsigned char *d = (const unsigned char *)pktdata;
+    const unsigned char *hnaddr = NULL;
     int hnlen = 0;
 
     while (ptr + 8 < pktlen) {
-        /* Search for specific Extensions sequence */
         if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
             d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
-            /* Check Extension length, Server Name list length
-            *  and Server Name length relations
-            */
             d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
-            {
-                if (ptr + 8 + d[ptr+8] > pktlen) {
-                    return FALSE;
-                }
-                hnaddr = &d[ptr+9];
-                hnlen = d[ptr+8];
-                /* Limit hostname size up to 253 bytes */
-                if (hnlen < 3 || hnlen > HOST_MAXLEN) {
-                    return FALSE;
-                }
-                /* Validate that hostname has only ascii lowercase characters */
-                for (int i=0; i<hnlen; i++) {
-                    if (!( (hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
-                         (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
-                         hnaddr[i] == '.' || hnaddr[i] == '-'))
-                    {
-                        return FALSE;
-                    }
-                }
-                *hostnameaddr = (char*)hnaddr;
-                *hostnamelen = (unsigned int)hnlen;
-                return TRUE;
+        {
+            hnaddr = &d[ptr+9];
+            hnlen = d[ptr+8];
+
+            if (ptr + 8 + hnlen > pktlen || hnlen < 3 || hnlen > HOST_MAXLEN) {
+                return FALSE;
             }
+
+            for (int i = 0; i < hnlen; i++) {
+                if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
+                      (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
+                      hnaddr[i] == '.' || hnaddr[i] == '-'))
+                {
+                    return FALSE;
+                }
+            }
+
+            *hostnameaddr = (char*)hnaddr;
+            *hostnamelen = (unsigned int)hnlen;
+            return TRUE;
+        }
         ptr++;
     }
+
     return FALSE;
 }
+
 
 static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
     if (size >= 1 && size <= 0xFFFFu) {
@@ -441,116 +437,105 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 
 /* HTTP method end without trailing space */
 static const char *find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
+    const char *method_end = NULL;
+    int fragmented = 0;
+
     switch (*pkt) {
         case 'G':
             if (strncmp(pkt, "GET", 3) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 3;
+                method_end = pkt + 3;
             }
             break;
         case 'P':
             if (strncmp(pkt, "POST", 4) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 4;
+                method_end = pkt + 4;
             }
             break;
         case 'H':
             if (strncmp(pkt, "HEAD", 4) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 4;
+                method_end = pkt + 4;
             }
             break;
         case 'O':
             if (strncmp(pkt, "OPTIONS", 7) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 7;
+                method_end = pkt + 7;
             }
             break;
         case 'D':
             if (strncmp(pkt, "DELETE", 6) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 6;
+                method_end = pkt + 6;
             }
             break;
         case 'T':
             if (strncmp(pkt, "TRACE", 5) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 5;
+                method_end = pkt + 5;
             }
             break;
         case 'C':
             if (strncmp(pkt, "CONNECT", 7) == 0) {
-                if (is_fragmented)
-                    *is_fragmented = 0;
-                return pkt + 7;
+                method_end = pkt + 7;
             }
             break;
         default:
-            /* Try to find HTTP method in a second part of fragmented packet */
-            if ((http_frag == 1 || http_frag == 2)) {
-                switch (*pkt) {
-                    case 'E':
-                        if (strncmp(pkt, "ET", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'S':
-                        if (strncmp(pkt, "ST", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'A':
-                        if (strncmp(pkt, "AD", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'N':
-                        if (strncmp(pkt, "NS", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'L':
-                        if (strncmp(pkt, "LE", http_frag) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break;
-                    case 'R':
-                        if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1;
-                        }
-                        break; 
-                    case 'O':
-                        if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
-                            if (is_fragmented)
-                                *is_fragmented = 1;
-                            return pkt + http_frag - 1; 
-                        }
-                        break; 
-                    default:
-                        return NULL; 
-                } 
-            } 
-    } 
-    return NULL; 
+            break;
+    }
+
+    if (method_end == NULL && (http_frag == 1 || http_frag == 2)) {
+        switch (*pkt) {
+            case 'E':
+                if (strncmp(pkt, "ET", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'S':
+                if (strncmp(pkt, "ST", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'A':
+                if (strncmp(pkt, "AD", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'N':
+                if (strncmp(pkt, "NS", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'L':
+                if (strncmp(pkt, "LE", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'R':
+                if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'O':
+                if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (method_end != NULL && is_fragmented != NULL) {
+        *is_fragmented = fragmented;
+    }
+
+    return method_end;
 }
+
 
 
 /** Fragment and send the packet.
@@ -575,36 +560,33 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
             return;
     }
 
-    switch(step) {
-        case 0:
-            if (packet_v4)
-                ppIpHdr->Length = htons(
-                    ntohs(ppIpHdr->Length) -
-                    packet_dataLen + fragment_size
-                );
-            else if (packet_v6)
-                ppIpV6Hdr->Length = htons(
-                    ntohs(ppIpV6Hdr->Length) -
-                    packet_dataLen + fragment_size
-                );
-            packetLen = packetLen - packet_dataLen + fragment_size;
-            break;
-        case 1:
-            if (packet_v4)
-                ppIpHdr->Length = htons(
-                    ntohs(ppIpHdr->Length) - fragment_size
-                );
-            else if (packet_v6)
-                ppIpV6Hdr->Length = htons(
-                    ntohs(ppIpV6Hdr->Length) - fragment_size
-                );
-            memmove(packet_data,
-                    (char*)packet_data + fragment_size,
-                    packet_dataLen - fragment_size);
-            packetLen -= fragment_size;
+    if (step == 0) {
+        if (packet_v4)
+            ppIpHdr->Length = htons(
+                ntohs(ppIpHdr->Length) -
+                packet_dataLen + fragment_size
+            );
+        else if (packet_v6)
+            ppIpV6Hdr->Length = htons(
+                ntohs(ppIpV6Hdr->Length) -
+                packet_dataLen + fragment_size
+            );
+        packetLen = packetLen - packet_dataLen + fragment_size;
+    } else if (step == 1) {
+        if (packet_v4)
+            ppIpHdr->Length = htons(
+                ntohs(ppIpHdr->Length) - fragment_size
+            );
+        else if (packet_v6)
+            ppIpV6Hdr->Length = htons(
+                ntohs(ppIpV6Hdr->Length) - fragment_size
+            );
+        memmove(packet_data,
+                (char*)packet_data + fragment_size,
+                packet_dataLen - fragment_size);
+        packetLen -= fragment_size;
 
-            ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + fragment_size);
-            break;
+        ppTcpHdr->SeqNum = htonl(ntohl(ppTcpHdr->SeqNum) + fragment_size);
     }
 
     addr.IPChecksum = 0;
