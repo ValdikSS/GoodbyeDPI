@@ -8,7 +8,7 @@
 #include "goodbyedpi.h"
 
 static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
-                                                 "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
+                                                 "User-Agent: curl/8.2.1\r\nAccept: */*\r\n"
                                                  "Accept-Encoding: deflate, gzip, br\r\n\r\n";
 static const unsigned char fake_https_request[] = {
     0x16, 0x03, 0x01, 0x02, 0x00, 0x01, 0x00, 0x01, 0xfc, 0x03, 0x03, 0x9a, 0x8f, 0xa7, 0x6a, 0x5d,
