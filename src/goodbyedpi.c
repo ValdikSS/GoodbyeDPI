@@ -862,7 +862,6 @@ int main(int argc, char *argv[]) {
             case '+': // --auto-ttl
                 do_fake_packet = 1;
                 do_auto_ttl = 1;
-
                 if (!optarg && argv[optind] && argv[optind][0] != '-')
                     optarg = argv[optind];
 
