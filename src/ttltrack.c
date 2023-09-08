@@ -38,6 +38,8 @@ typedef struct tcp_connrecord {
 
 static time_t last_cleanup = 0;
 static tcp_connrecord_t *conntrack = NULL;
+static tcp_connrecord_t connrecord_pool[CONNRECORD_POOL_SIZE];
+static int connrecord_pool_index = 0;
 
 inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_t srcip[4],
                     const uint32_t dstip[4], const uint16_t srcport, const uint16_t dstport)
@@ -145,7 +147,7 @@ static int add_tcp_conntrack(const uint32_t srcip[4], const uint32_t dstip[4],
     if (!(srcip && srcport && dstip && dstport))
         return FALSE;
 
-    tcp_connrecord_t *tmp_connrecord = malloc(sizeof(tcp_connrecord_t));
+    tcp_connrecord_t *tmp_connrecord = &connrecord_pool[connrecord_pool_index++];
     construct_key(srcip, dstip, srcport, dstport, tmp_connrecord->key, is_ipv6);
 
     if (!check_get_tcp_conntrack_key(tmp_connrecord->key, NULL)) {
@@ -156,7 +158,6 @@ static int add_tcp_conntrack(const uint32_t srcip[4], const uint32_t dstip[4],
         return TRUE;
     }
     debug("Not added TCP conntrack %u:%hu - %u:%hu\n", srcip[0], ntohs(srcport), dstip[0], ntohs(dstport));
-    free(tmp_connrecord);
     return FALSE;
 }
 
@@ -173,8 +174,7 @@ static void tcp_cleanup() {
 
         HASH_ITER(hh, conntrack, tmp_connrecord, tmp_connrecord2) {
             if (difftime(last_cleanup, tmp_connrecord->time) >= TCP_CLEANUP_INTERVAL_SEC) {
-                HASH_DEL(conntrack, tmp_connrecord);
-                free(tmp_connrecord);
+                HASH_DELETE(hh, conntrack, tmp_connrecord);
             }
         }
     }
@@ -209,8 +209,7 @@ int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
     if (check_get_tcp_conntrack_key(key, &tmp_connrecord) && tmp_connrecord) {
         /* Connection exists in conntrack, moving on */
         deconstruct_key(key, tmp_connrecord, conn_info);
-        HASH_DEL(conntrack, tmp_connrecord);
-        free(tmp_connrecord);
+        HASH_DELETE(hh, conntrack, tmp_connrecord);
         debug("____tcp_handle_outgoing TRUE: srcport = %hu\n", ntohs(srcport));
         return TRUE;
     }

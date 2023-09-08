@@ -7,7 +7,7 @@
 #include "windivert.h"
 #include "goodbyedpi.h"
 
-static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
+static const unsigned char fake_http_request[] = "GET / HTTP/3.0\r\nHost: www.yandex.ru\r\n"
                                                  "User-Agent: curl/8.2.1\r\nAccept: */*\r\n"
                                                  "Accept-Encoding: deflate, gzip, br\r\n\r\n";
 static const unsigned char fake_https_request[] = {
