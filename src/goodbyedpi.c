@@ -415,42 +415,92 @@ static const char *find_http_method_end(const char *pkt, unsigned int http_frag,
     const char *method_end = NULL;
     int fragmented = 0;
 
-    if (strncmp(pkt, "GET", 3) == 0) {
-        method_end = pkt + 3;
-    } else if (strncmp(pkt, "POST", 4) == 0) {
-        method_end = pkt + 4;
-    } else if (strncmp(pkt, "HEAD", 4) == 0) {
-        method_end = pkt + 4;
-    } else if (strncmp(pkt, "OPTIONS", 7) == 0) {
-        method_end = pkt + 7;
-    } else if (strncmp(pkt, "DELETE", 6) == 0) {
-        method_end = pkt + 6;
-    } else if (strncmp(pkt, "TRACE", 5) == 0) {
-        method_end = pkt + 5;
-    } else if (strncmp(pkt, "CONNECT", 7) == 0) {
-        method_end = pkt + 7;
-    } else if ((http_frag == 1 || http_frag == 2)) {
-        if (strncmp(pkt, "ET", http_frag) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "ST", http_frag) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "AD", http_frag) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "NS", http_frag) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "LE", http_frag) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
-        } else if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
-            method_end = pkt + http_frag - 1;
-            fragmented = 1;
+    switch (*pkt) {
+        case 'G':
+            if (strncmp(pkt, "GET", 3) == 0) {
+                method_end = pkt + 3;
+            }
+            break;
+        case 'P':
+            if (strncmp(pkt, "POST", 4) == 0) {
+                method_end = pkt + 4;
+            }
+            break;
+        case 'H':
+            if (strncmp(pkt, "HEAD", 4) == 0) {
+                method_end = pkt + 4;
+            }
+            break;
+        case 'O':
+            if (strncmp(pkt, "OPTIONS", 7) == 0) {
+                method_end = pkt + 7;
+            }
+            break;
+        case 'D':
+            if (strncmp(pkt, "DELETE", 6) == 0) {
+                method_end = pkt + 6;
+            }
+            break;
+        case 'T':
+            if (strncmp(pkt, "TRACE", 5) == 0) {
+                method_end = pkt + 5;
+            }
+            break;
+        case 'C':
+            if (strncmp(pkt, "CONNECT", 7) == 0) {
+                method_end = pkt + 7;
+            }
+            break;
+        default:
+            break;
+    }
+
+    if (method_end == NULL && (http_frag == 1 || http_frag == 2)) {
+        switch (*pkt) {
+            case 'E':
+                if (strncmp(pkt, "ET", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'S':
+                if (strncmp(pkt, "ST", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'A':
+                if (strncmp(pkt, "AD", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'N':
+                if (strncmp(pkt, "NS", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'L':
+                if (strncmp(pkt, "LE", http_frag) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'R':
+                if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            case 'O':
+                if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
+                    method_end = pkt + http_frag - 1;
+                    fragmented = 1;
+                }
+                break;
+            default:
+                break;
         }
     }
 
