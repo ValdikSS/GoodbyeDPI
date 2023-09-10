@@ -177,17 +177,21 @@ static struct option long_options[] = {
 static char *filter_string = NULL;
 static char *filter_passive_string = NULL;
 
-static void add_filter_str(int proto, int port) {
-    const char *udp = " or (udp and !impostor and !loopback and (udp.SrcPort == %d or udp.DstPort == %d))";
-    const char *tcp = " or (tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and (tcp.SrcPort == %d or tcp.DstPort == %d))";
+static void add_maxpayloadsize_str(unsigned short maxpayload) {
+    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
+    char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
-    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
-    char *new_filter = malloc(new_filter_size);
+    sprintf(addfilter, maxpayloadsize_str, maxpayload);
 
-    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
-
+    char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
-    filter_string = new_filter;
+    filter_string = newstr;
+
+    newstr = repl_str(filter_passive_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
+    free(filter_passive_string);
+    filter_passive_string = newstr;
+
+    free(addfilter); // Free the allocated memory
 }
 
 static void add_ip_id_str(int id) {
@@ -869,7 +873,7 @@ int main(int argc, char *argv[]) {
                     char *autottl_copy = strdup(optarg);
                     if (strchr(autottl_copy, '-')) {
                         // token "-" found, start X-Y parser
-                        char *autottl_current = strtok(autottl_copy, "-");
+                        char *autottl_current = strtok_r(autottl_copy, "-", &saveptr);
                         auto_ttl_1 = atoub(autottl_current, "Set Auto TTL parameter error!");
                         autottl_current = strtok(NULL, "-");
                         if (!autottl_current) {
