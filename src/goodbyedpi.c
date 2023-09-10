@@ -184,11 +184,16 @@ static void add_filter_str(int proto, int port) {
     size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
     char *new_filter = malloc(new_filter_size);
 
-    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
+    if (proto == IPPROTO_UDP) {
+        snprintf(new_filter, new_filter_size, udp, port, port);
+    } else {
+        snprintf(new_filter, new_filter_size, tcp, port, port);
+    }
 
     free(filter_string);
     filter_string = new_filter;
 }
+
 
 static void add_ip_id_str(int id) {
     const char *ipid = " or ip.Id == %d";
