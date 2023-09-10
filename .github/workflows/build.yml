@@ -31,7 +31,7 @@ jobs:
 
       - name: Download WinDivert from cache
         id: windivert-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: ${{ env. WINDIVERT_NAME }}
           key: ${{ env. WINDIVERT_SHA256 }}
@@ -56,7 +56,7 @@ jobs:
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86_64
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
@@ -72,7 +72,7 @@ jobs:
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
