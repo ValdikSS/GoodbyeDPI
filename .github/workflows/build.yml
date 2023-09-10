@@ -7,16 +7,16 @@ on:
   workflow_dispatch:
 
 env:
-  WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-2.2.0-A.zip
-  WINDIVERT_NAME: WinDivert-2.2.0-A.zip
-  WINDIVERT_BASENAME: WinDivert-2.2.0-A
+  WINDIVERT_URL: https://www.reqrypt.org/download/WinDivert-2.2.2-A.zip
+  WINDIVERT_NAME: WinDivert-2.2.2-A.zip
+  WINDIVERT_BASENAME: WinDivert-2.2.2-A
   WINDIVERT_SHA256: 2a7630aac0914746fbc565ac862fa096e3e54233883ac52d17c83107496b7a7f
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Declare short commit variable
         id: vars
@@ -31,7 +31,7 @@ jobs:
 
       - name: Download WinDivert from cache
         id: windivert-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ env. WINDIVERT_NAME }}
           key: ${{ env. WINDIVERT_SHA256 }}
@@ -56,7 +56,7 @@ jobs:
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86_64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
@@ -72,7 +72,7 @@ jobs:
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
