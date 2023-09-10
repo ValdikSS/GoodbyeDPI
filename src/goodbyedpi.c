@@ -177,21 +177,17 @@ static struct option long_options[] = {
 static char *filter_string = NULL;
 static char *filter_passive_string = NULL;
 
-static void add_maxpayloadsize_str(unsigned short maxpayload) {
-    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
-    char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
+static void add_filter_str(int proto, int port) {
+    const char *udp = " or (udp and !impostor and !loopback and (udp.SrcPort == %d or udp.DstPort == %d))";
+    const char *tcp = " or (tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and (tcp.SrcPort == %d or tcp.DstPort == %d))";
 
-    sprintf(addfilter, maxpayloadsize_str, maxpayload);
+    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
+    char *new_filter = malloc(new_filter_size);
 
-    char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
+    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
+
     free(filter_string);
-    filter_string = newstr;
-
-    newstr = repl_str(filter_passive_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
-    free(filter_passive_string);
-    filter_passive_string = newstr;
-
-    free(addfilter); // Free the allocated memory
+    filter_string = new_filter;
 }
 
 static void add_ip_id_str(int id) {
