@@ -136,18 +136,18 @@ static int running_from_service = 0;
 static int exiting = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
-static const char http10_redirect_302[] = "HTTP/1.0 302 ";
-static const char http11_redirect_302[] = "HTTP/1.1 302 ";
+static const char *http10_redirect_302 = "HTTP/1.0 302 "; 
+static const char *http11_redirect_302 = "HTTP/1.1 302 ";
 static const char http_host_find[] = "\r\nHost: ";
 static const char http_host_replace[] = "\r\nhoSt: ";
 static const char http_useragent_find[] = "\r\nUser-Agent: ";
 static const char location_http[] = "\r\nLocation: http://";
 static const char connection_close[] = "\r\nConnection: close";
 static const char *http_methods[] = {
-    "GET ",
+    "GET ",  
     "HEAD ",
     "POST ",
-    "PUT ",
+    "PUT ",  
     "DELETE ",
     "CONNECT ",
     "OPTIONS ",
@@ -156,7 +156,7 @@ static const char *http_methods[] = {
 static struct option long_options[] = {
     {"port",        required_argument, 0,  'z' },
     {"dns-addr",    required_argument, 0,  'd' },
-    {"dns-port",    required_argument, 0,  'g' },
+    {"dns-port",    required_argument, 0,  'g' }, 
     {"dnsv6-addr",  required_argument, 0,  '!' },
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
@@ -316,42 +316,51 @@ static void mix_case(char *pktdata, unsigned int pktlen) {
 
 
 static int is_passivedpi_redirect(const char *pktdata, unsigned int pktlen) {
-    /* First check if this is HTTP 302 redirect */
-    if (memcmp(pktdata, http11_redirect_302, sizeof(http11_redirect_302)-1) == 0 ||
-        memcmp(pktdata, http10_redirect_302, sizeof(http10_redirect_302)-1) == 0)
-    {
-        /* Then check if this is a redirect to new http site with Connection: close */
-        if (dumb_memmem(pktdata, pktlen, location_http, sizeof(location_http)-1) &&
-            dumb_memmem(pktdata, pktlen, connection_close, sizeof(connection_close)-1)) {
-            return TRUE;
-        }
+
+  /* Check HTTP status code using hash table lookup */
+  if (http_status_code_hash(pktdata) == 302) {
+
+    /* Search for location header using Boyer-Moore */ 
+    if (boyer_moore_search(pktdata, pktlen, location_http, sizeof(location_http)-1)) {
+
+      /* Search for connection header using Boyer-Moore */
+      if (boyer_moore_search(pktdata, pktlen, connection_close, sizeof(connection_close)-1)) {
+        return TRUE;
+      }
+
     }
-    return FALSE;
+
+  }
+
+  return FALSE;
+
 }
+
 
 static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
                 const char *hdrname,
                 char **hdrnameaddr,
                 char **hdrvalueaddr, unsigned int *hdrvaluelen) {
-    char *data_addr_rn;
+
     char *hdr_begin;
+    char *data_addr_rn;
 
     *hdrvaluelen = 0u;
     *hdrnameaddr = NULL;
     *hdrvalueaddr = NULL;
 
-    /* Search for the header */
-    hdr_begin = dumb_memmem(pktdata, pktlen,
+    /* Search for the header using Boyer-Moore */
+    hdr_begin = boyer_moore_search(pktdata, pktlen,  
                 hdrname, strlen(hdrname));
     if (!hdr_begin) return FALSE;
     if (pktdata > hdr_begin) return FALSE;
 
-    /* Set header address */
+    /* Set header address */  
     *hdrnameaddr = hdr_begin;
     *hdrvalueaddr = hdr_begin + strlen(hdrname);
 
-    /* Search for header end (\r\n) */
-    data_addr_rn = dumb_memmem(*hdrvalueaddr,
+    /* Search for header end using Boyer-Moore */
+    data_addr_rn = boyer_moore_search(*hdrvalueaddr,
                         pktlen - (uintptr_t)(*hdrvalueaddr - pktdata),
                         "\r\n", 2);
     if (data_addr_rn) {
@@ -359,8 +368,10 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
         if (*hdrvaluelen >= 3 && *hdrvaluelen <= HOST_MAXLEN)
             return TRUE;
     }
+
     return FALSE;
 }
+
 
 /**
  * Very crude Server Name Indication (TLS ClientHello hostname) extractor.
