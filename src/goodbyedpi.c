@@ -227,13 +227,58 @@ static void finalize_filter_strings() {
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen, const char* needle, unsigned int nlen) {
-    if (nlen > hlen) return NULL;
-    for (size_t i = 0; i < hlen - nlen + 1; i++) {
-        if (memcmp(haystack + i, needle, nlen) == 0) {
-            return (char*)(haystack + i);
-        }
+
+  if (nlen > hlen) return NULL;
+
+  // KMP algorithm
+  int lps[nlen];
+  computeLPSArray(needle, nlen, lps);
+
+  int i = 0; // index for haystack[]
+  int j = 0; // index for needle[]
+  while (i < hlen) {
+    if (needle[j] == haystack[i]) {
+      j++;
+      i++;
     }
-    return NULL;
+
+    if (j == nlen) {
+      return (char*)(haystack + i - j); 
+    }
+
+    // mismatch after j matches
+    else if (i < hlen && needle[j] != haystack[i]) {
+      if (j != 0) 
+        j = lps[j-1];
+      else
+        i = i+1;
+    }
+  }
+
+  return NULL;
+}
+
+void computeLPSArray(const char *pat, int M, int *lps) {
+  int len = 0;
+  lps[0] = 0; 
+
+  int i = 1;
+  while (i < M) {
+    if (pat[i] == pat[len]) {
+      len++;
+      lps[i] = len;
+      i++;
+    }
+    else {
+      if (len != 0) {
+        len = lps[len-1];
+      }
+      else {
+        lps[i] = 0;
+        i++;
+      }
+    }
+  }
 }
 
 unsigned short int atousi(const char *str, const char *msg) {
