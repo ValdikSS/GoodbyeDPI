@@ -59,77 +59,57 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
                    "(ipv6.SrcAddr < ff00::0 or ipv6.SrcAddr > ffff::0)" \
                    ")"
 
-/* #IPID# is a template to find&replace */
-#define IPID_TEMPLATE "#IPID#"
-#define MAXPAYLOADSIZE_TEMPLATE "#MAXPAYLOADSIZE#"
-#define FILTER_STRING_TEMPLATE \
-        "(tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and " \
-        "((inbound and (" \
-         "(" \
-          "(" \
-           "(ipv6 or (ip.Id >= 0x0 and ip.Id <= 0xF) " IPID_TEMPLATE \
-           ") and " \
-           "tcp.SrcPort == 80 and tcp.Ack" \
-          ") or " \
-          "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
-         ")" \
-         " and (" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC "))) or " \
-        "(outbound and " \
-         "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
-         "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
-        "))"
-#define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
-        "!impostor and !loopback and " \
-        "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
-        "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
-        DIVERT_NO_LOCALNETSv4_SRC
+/* Full filter strings defined statically */
+#define FILTER_STRING \
+  "(tcp and !impostor and !loopback " MAXPAYLOADSIZE_TEMPLATE " and " \
+  "((inbound and (" \
+   "(" \
+    "(" \
+     "(ipv6 or (ip.Id >= 0x0 and ip.Id <= 0xF) " IPID_TEMPLATE \
+    ") and " \
+    "tcp.SrcPort == 80 and tcp.Ack" \
+   ") or " \
+   "((tcp.SrcPort == 80 or tcp.SrcPort == 443) and tcp.Ack and tcp.Syn)" \
+  ")" \
+  " and (" DIVERT_NO_LOCALNETSv4_SRC " or " DIVERT_NO_LOCALNETSv6_SRC "))) or " \
+ "(outbound and " \
+  "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
+  "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
+ "))"
 
-#define SET_HTTP_FRAGMENT_SIZE_OPTION(fragment_size) do { \
-    if (!http_fragment_size) { \
-        http_fragment_size = (unsigned int)fragment_size; \
-    } \
-    else if (http_fragment_size != (unsigned int)fragment_size) { \
-        printf( \
-            "WARNING: HTTP fragment size is already set to %u, not changing.\n", \
-            http_fragment_size \
-        ); \
-    } \
-} while (0)
+#define FILTER_PASSIVE_STRING \
+  "inbound and ip and tcp and " \
+  "!impostor and !loopback and " \ 
+  "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
+  "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
+  DIVERT_NO_LOCALNETSv4_SRC
 
-#define TCP_HANDLE_OUTGOING_TTL_PARSE_PACKET_IF() \
-    if ((packet_v4 && tcp_handle_outgoing(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr, \
-                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
-                        &tcp_conn_info, 0)) \
-        || \
-        (packet_v6 && tcp_handle_outgoing(ppIpV6Hdr->SrcAddr, ppIpV6Hdr->DstAddr, \
-                        ppTcpHdr->SrcPort, ppTcpHdr->DstPort, \
-                        &tcp_conn_info, 1)))
-
-#define TCP_HANDLE_OUTGOING_FAKE_PACKET(func) do { \
-    should_send_fake = 1; \
-    if (do_auto_ttl || ttl_min_nhops) { \
-        TCP_HANDLE_OUTGOING_TTL_PARSE_PACKET_IF() { \
-            if (do_auto_ttl) { \
-                /* If Auto TTL mode */ \
-                ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, auto_ttl_1, auto_ttl_2, \
-                                                      ttl_min_nhops, auto_ttl_max); \
-                if (do_tcp_verb) { \
-                    printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
-                } \
-            } \
-            else if (ttl_min_nhops) { \
-                /* If not Auto TTL mode but --min-ttl is set */ \
-                if (!tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops, 0)) { \
-                    /* Send only if nhops >= min_ttl */ \
-                    should_send_fake = 0; \
-                } \
-            } \
+#define TCP_HANDLE_OUTGOING_FAKE_PACKET(func) \
+{ \
+  should_send_fake = 1; \
+  if (do_auto_ttl || ttl_min_nhops) { \
+    if ( \
+       (packet_v4 && tcp_handle_outgoing(&ppIpHdr->SrcAddr, &ppIpHdr->DstAddr, ppTcpHdr->SrcPort, ppTcpHdr->DstPort, &tcp_conn_info, 0)) || \
+       (packet_v6 && tcp_handle_outgoing(ppIpV6Hdr->SrcAddr, ppIpV6Hdr->DstAddr, ppTcpHdr->SrcPort, ppTcpHdr->DstPort, &tcp_conn_info, 1)) \
+    ) { \
+      if (do_auto_ttl) { \
+        ttl_of_fake_packet = tcp_get_auto_ttl(tcp_conn_info.ttl, auto_ttl_1, auto_ttl_2, ttl_min_nhops, auto_ttl_max); \
+        if (do_tcp_verb) { \
+          printf("Connection TTL = %d, Fake TTL = %d\n", tcp_conn_info.ttl, ttl_of_fake_packet); \
         } \
+      } \
+      else if (ttl_min_nhops) { \
+        if (!tcp_get_auto_ttl(tcp_conn_info.ttl, 0, 0, ttl_min_nhops, 0)) { \
+          should_send_fake = 0; \
+        } \
+      } \
     } \
-    if (should_send_fake) \
-        func(w_filter, &addr, packet, packetLen, packet_v6, \
-             ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq); \
-} while (0)
+  } \
+  if (should_send_fake) { \
+    func(w_filter, &addr, packet, packetLen, packet_v6, ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq); \
+  } \
+}
+
 
 
 static int running_from_service = 0;
