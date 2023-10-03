@@ -48,7 +48,7 @@ jobs:
       - name: Compile x86_64
         run: >
           cd src && make clean &&
-          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4 -O3 -march=skylake -mtune=skylake -ffast-math -fprofile-generate
+          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4 -O3 -march=skylake -mtune=skylake -ffast-math
       
       - name: Prepare x86_64 directory
         run: |
