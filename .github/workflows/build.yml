@@ -64,7 +64,7 @@ jobs:
       - name: Compile i686
         run: >
           cd src && make clean &&
-          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x86 -j4
+          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x86 -j4 OPTIMIZATION_FLAGS="-O3 -march=native"
 
       - name: Prepare x86 directory
         run: |
