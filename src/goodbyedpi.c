@@ -19,6 +19,7 @@
 #include "ttltrack.h"
 #include "blackwhitelist.h"
 #include "fakepackets.h"
+#include "tls.h"
 
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
@@ -387,48 +388,136 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
     return FALSE;
 }
 
+static int contains_tls_record_with_client_hello(const char* pktdata, unsigned int pktlen) {
+    // check min header sizes
+    if (pktlen < TLS_RECORD_HEADER_SIZE + TLS_MESSAGE_HEADER_SIZE) {
+        debug("Packet too small for TLS record and message header\n");
+         return FALSE;
+    }
+    // check content type handshake
+    if (pktdata[0] != TLS_CONTENT_TYPE_HANDSHAKE) {
+        debug("Packet does not contain TLS handshake\n");
+        return FALSE;
+    }
+    // check if record header matches any TLS version
+    if ( 
+        // TLS 1.0 Version is also used for backwards compatibility
+        memcmp(pktdata+1, TLS_1_0_VERSION, TLS_VERSION_LENGTH) == 1 &&
+        memcmp(pktdata+1, TLS_1_1_VERSION, TLS_VERSION_LENGTH) == 1 &&
+        memcmp(pktdata+1, TLS_1_2_AND_1_3_VERSION, TLS_VERSION_LENGTH) == 1) {
+        debug("Packet does not contain TLS 1.0, 1.1, 1.2 or 1.3\n");
+        return FALSE;
+    }
+    // check if handshake message contains client hello
+    if (pktdata[5] != TLS_HANDSHAKE_TYPE_CLIENT_HELLO) {
+        debug("Packet does not contain TLS client hello\n");
+        return FALSE;
+    }
+    // looks good otherwise
+    return TRUE;
+}
+
 /**
- * Very crude Server Name Indication (TLS ClientHello hostname) extractor.
+ * Extracts the (first) hostname in the SNI of the given packet. Assumes that the packet is a TLS Client Hello.
  */
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
-    unsigned int ptr = 0;
+    
     unsigned const char *d = (unsigned const char *)pktdata;
-    unsigned const char *hnaddr = 0;
-    int hnlen = 0;
+    unsigned const char *host_name_address = 0;
+    unsigned int host_name_length = 0;
 
-    while (ptr + 8 < pktlen) {
-        /* Search for specific Extensions sequence */
-        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
-            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
-            /* Check Extension length, Server Name list length
-            *  and Server Name length relations
-            */
-            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
-            {
-                if (ptr + 8 + d[ptr+8] > pktlen) {
-                    return FALSE;
-                }
-                hnaddr = &d[ptr+9];
-                hnlen = d[ptr+8];
-                /* Limit hostname size up to 253 bytes */
-                if (hnlen < 3 || hnlen > HOST_MAXLEN) {
-                    return FALSE;
-                }
-                /* Validate that hostname has only ascii lowercase characters */
-                for (int i=0; i<hnlen; i++) {
-                    if (!( (hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
-                         (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
-                         hnaddr[i] == '.' || hnaddr[i] == '-'))
-                    {
-                        return FALSE;
-                    }
-                }
-                *hostnameaddr = (char*)hnaddr;
-                *hostnamelen = (unsigned int)hnlen;
-                return TRUE;
+    // offset for first length_field to parse
+    unsigned int p = TLS_RECORD_HEADER_SIZE + TLS_MESSAGE_HEADER_SIZE + TLS_VERSION_LENGTH + TLS_RANDOM_LENGTH;
+
+    if (p + TLS_SESSION_ID_LENGTH >= pktlen) {
+        debug("Packet too small for header\n");
+        return FALSE;
+    }
+
+    // skip session id
+    unsigned int session_id_length = d[p];
+    p += (session_id_length + TLS_SESSION_ID_LENGTH);
+
+    if (p + TLS_CIPHER_SUITES_LENGTH >= pktlen) {
+        debug("Packet too small for session id\n");
+        return FALSE;
+    }
+
+    // skip cipher suites
+    unsigned int cipher_suites_length = (unsigned int)(d[p] << 8) + d[p+1];
+    p += (cipher_suites_length + TLS_CIPHER_SUITES_LENGTH);
+
+    if (p + TLS_COMPRESSION_METHODS_LENGTH >= pktlen) {
+        debug("Packet too small for cipher suites\n");
+        return FALSE;
+    }
+
+    // skip compression methods
+    unsigned int compression_methods_length = d[p];
+    p += (compression_methods_length + TLS_COMPRESSION_METHODS_LENGTH);
+
+    if (p + TLS_EXTENSIONS_LENGTH >= pktlen) {
+        debug("Packet too small for compression methods\n");
+        return FALSE;
+    }
+
+    unsigned int extensions_length = (unsigned int)(d[p] << 8) + d[p+1];
+    p += TLS_EXTENSIONS_LENGTH;
+
+    while (p + TLS_EXTENSION_TYPE_LENGTH + TLS_EXTENSION_LENGTH_LENGTH < min(pktlen, p + extensions_length)) {
+
+        if (memcmp(d+p, TLS_EXTENSION_TYPE_SERVER_NAME, TLS_EXTENSION_TYPE_LENGTH) == 0) {
+            // finally extract sni
+            p += TLS_EXTENSION_TYPE_LENGTH + TLS_EXTENSION_LENGTH_LENGTH;
+            
+            if (p + TLS_SNI_HEADER_LENGTH >= pktlen) {
+                debug("Packet too small for extension header\n");
+                return FALSE;
             }
-        ptr++;
+            unsigned int host_name_type = d[p+TLS_EXTENSION_TYPE_LENGTH];
+            
+            if (host_name_type != TLS_SNI_HOST_NAME_TYPE) {
+                debug("SNI type is not host name\n");
+                return FALSE;
+            }
+
+            host_name_length = (unsigned int)(d[p + TLS_EXTENSION_TYPE_LENGTH + 1] << 8) + d[p + TLS_EXTENSION_TYPE_LENGTH + 2];
+            p += TLS_SNI_HEADER_LENGTH;
+
+            if (p + host_name_length >= pktlen) {
+                debug("Packet too small for host name\n");
+                return FALSE;
+            }
+
+            host_name_address = &d[p];
+            /* Limit hostname size up to 253 bytes */
+            if (host_name_length < 3) {
+                debug("Host name too short\n");
+                return FALSE;
+            } else if (host_name_length > HOST_MAXLEN) {
+                debug("Host name too long\n");
+                return FALSE;
+            }
+
+            *hostnameaddr = (char*)host_name_address;
+            *hostnamelen = host_name_length;
+
+            // TODO: is this necessary? if yes: why? domain names are case insensitive
+            /* for (int i=0; i<hnlen; i++) {
+                if (!( (hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
+                        (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
+                        hnaddr[i] == '.' || hnaddr[i] == '-'))
+                {
+                    return FALSE;
+                }
+            } */
+            return TRUE;
+        } else {
+            // skip extension
+            unsigned int extension_length = (unsigned int)(d[p+TLS_EXTENSION_TYPE_LENGTH] << 8) + d[p+TLS_EXTENSION_TYPE_LENGTH+1];
+            p += TLS_EXTENSION_TYPE_LENGTH + TLS_EXTENSION_LENGTH_LENGTH + extension_length;
+        }
     }
     return FALSE;
 }
@@ -1128,9 +1217,11 @@ int main(int argc, char *argv[]) {
                      * In case of Window Size fragmentation=2, we'll receive only 2 byte packet.
                      * But if the packet is more than 2 bytes, check ClientHello byte.
                     */
-                    if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
-                        (packet_dataLen >= 3 && memcmp(packet_data, "\x16\x03\x01", 3) == 0))
-                    {
+                    if (
+                        // TODO: feedback on when this triggers and whether this is necessary, if we cannot check for sni do we want to circumvent?
+                        (packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
+                        (packet_dataLen >= 3 && contains_tls_record_with_client_hello(packet_data, packet_dataLen)))
+                    {   
                         if (do_blacklist) {
                             sni_ok = extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
