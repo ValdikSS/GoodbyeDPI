@@ -226,59 +226,23 @@ static void finalize_filter_strings() {
     filter_passive_string = newstr;
 }
 
-static char* dumb_memmem(const char* haystack, unsigned int hlen, const char* needle, unsigned int nlen) {
+static char* dumb_memmem(const char* haystack, unsigned int hlen,
+                              const char* needle, unsigned int nlen)
+{
+    if (nlen > hlen) return NULL;
+    if (nlen == 0) return (char*)haystack;
 
-  if (nlen > hlen) return NULL;
+    unsigned int skip[256];
+    for (size_t i = 0; i < 256; ++i) skip[i] = nlen;
+    for (size_t i = 0; i < nlen - 1; ++i) skip[(unsigned char)needle[i]] = nlen - i - 1;
 
-  // KMP algorithm
-  int lps[nlen];
-  computeLPSArray(needle, nlen, lps);
-
-  int i = 0; // index for haystack[]
-  int j = 0; // index for needle[]
-  while (i < hlen) {
-    if (needle[j] == haystack[i]) {
-      j++;
-      i++;
+    for (size_t i = nlen - 1; i < hlen; i += skip[(unsigned char)haystack[i]]) {
+        if (memcmp(haystack + i - nlen + 1, needle, nlen) == 0) {
+            return (char*)(haystack + i - nlen + 1);
+        }
     }
 
-    if (j == nlen) {
-      return (char*)(haystack + i - j); 
-    }
-
-    // mismatch after j matches
-    else if (i < hlen && needle[j] != haystack[i]) {
-      if (j != 0) 
-        j = lps[j-1];
-      else
-        i = i+1;
-    }
-  }
-
-  return NULL;
-}
-
-void computeLPSArray(const char *pat, int M, int *lps) {
-  int len = 0;
-  lps[0] = 0; 
-
-  int i = 1;
-  while (i < M) {
-    if (pat[i] == pat[len]) {
-      len++;
-      lps[i] = len;
-      i++;
-    }
-    else {
-      if (len != 0) {
-        len = lps[len-1];
-      }
-      else {
-        lps[i] = 0;
-        i++;
-      }
-    }
-  }
+    return NULL;
 }
 
 unsigned short int atousi(const char *str, const char *msg) {
@@ -286,7 +250,7 @@ unsigned short int atousi(const char *str, const char *msg) {
     const unsigned short int limitValue = 0xFFFFu;
 
     if (res > limitValue) {
-        puts(msg);
+        fputs(msg, stderr);
         exit(EXIT_FAILURE);
     }
     return (unsigned short int)res;
@@ -456,104 +420,27 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 }
 
 /* HTTP method end without trailing space */
-static const char *find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
-    const char *method_end = NULL;
-    int fragmented = 0;
-
-    switch (*pkt) {
-        case 'G':
-            if (strncmp(pkt, "GET", 3) == 0) {
-                method_end = pkt + 3;
-            }
-            break;
-        case 'P':
-            if (strncmp(pkt, "POST", 4) == 0) {
-                method_end = pkt + 4;
-            }
-            break;
-        case 'H':
-            if (strncmp(pkt, "HEAD", 4) == 0) {
-                method_end = pkt + 4;
-            }
-            break;
-        case 'O':
-            if (strncmp(pkt, "OPTIONS", 7) == 0) {
-                method_end = pkt + 7;
-            }
-            break;
-        case 'D':
-            if (strncmp(pkt, "DELETE", 6) == 0) {
-                method_end = pkt + 6;
-            }
-            break;
-        case 'T':
-            if (strncmp(pkt, "TRACE", 5) == 0) {
-                method_end = pkt + 5;
-            }
-            break;
-        case 'C':
-            if (strncmp(pkt, "CONNECT", 7) == 0) {
-                method_end = pkt + 7;
-            }
-            break;
-        default:
-            break;
-    }
-
-    if (method_end == NULL && (http_frag == 1 || http_frag == 2)) {
-        switch (*pkt) {
-            case 'E':
-                if (strncmp(pkt, "ET", http_frag) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'S':
-                if (strncmp(pkt, "ST", http_frag) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'A':
-                if (strncmp(pkt, "AD", http_frag) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'N':
-                if (strncmp(pkt, "NS", http_frag) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'L':
-                if (strncmp(pkt, "LE", http_frag) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'R':
-                if (strncmp(pkt, "RACE", http_frag + 1) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            case 'O':
-                if (strncmp(pkt, "ONNECT", http_frag + 1) == 0) {
-                    method_end = pkt + http_frag - 1;
-                    fragmented = 1;
-                }
-                break;
-            default:
-                break;
+static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
+    unsigned int i;
+    for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
+        unsigned int method_length = strlen(http_methods[i]);
+        if (memcmp(pkt, http_methods[i], method_length) == 0) {
+            if (is_fragmented)
+                *is_fragmented = 0;
+            return (char*)pkt + method_length - 1;
+        }
+        /* Try to find HTTP method in a second part of fragmented packet */
+        if ((http_frag == 1 || http_frag == 2) &&
+            memcmp(pkt, http_methods[i] + http_frag,
+                   method_length - http_frag) == 0
+           )
+        {
+            if (is_fragmented)
+                *is_fragmented = 1;
+            return (char*)pkt + method_length - http_frag - 1;
         }
     }
-
-    if (method_end != NULL && is_fragmented != NULL) {
-        *is_fragmented = fragmented;
-    }
-
-    return method_end;
+    return NULL;
 }
 
 
