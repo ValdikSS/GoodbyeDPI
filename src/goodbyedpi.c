@@ -213,14 +213,13 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
     const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
     char *addfilter;
 
-    asprintf(&addfilter, "%s", maxpayloadsize_str, maxpayload);
+    asprintf(&addfilter, maxpayloadsize_str, maxpayload);
 
     char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
     filter_string = newstr;
     free(addfilter);
 }
-
 
 
 static void finalize_filter_strings() {
