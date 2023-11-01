@@ -808,15 +808,15 @@ int main(int argc, char *argv[]) {
                     char *autottl_copy = strdup(optarg);
                     if (strchr(autottl_copy, '-')) {
                         // token "-" found, start X-Y parser
-                        char *autottl_current = strtok(autottl_copy, "-");
+                        char *autottl_current = strtok_s(autottl_copy, "-");
                         auto_ttl_1 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok(NULL, "-");
+                        autottl_current = strtok_s(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
                         }
                         auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok(NULL, "-");
+                        autottl_current = strtok_s(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
