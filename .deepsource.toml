@@ -1,4 +1,0 @@
-version = 1
-
-[[analyzers]]
-name = "cxx"
