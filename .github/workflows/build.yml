@@ -27,7 +27,7 @@ jobs:
         run: >
           sudo rm /var/lib/man-db/auto-update &&
           sudo DEBIAN_FRONTEND=noninteractive XZ_DEFAULTS="-T0" XZ_OPT="-T0" eatmydata
-          apt install -y --no-install-recommends gcc-mingw-w64
+          apt install -y --no-install-recommends mingw-w64-x86-64-dev
 
       - name: Download WinDivert from cache
         id: windivert-cache
