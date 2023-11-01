@@ -213,13 +213,14 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
     const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
     char *addfilter;
 
-    asprintf(&addfilter, maxpayloadsize_str, maxpayload);
+    asprintf(&addfilter, "%s", maxpayloadsize_str, maxpayload);
 
     char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
     filter_string = newstr;
     free(addfilter);
 }
+
 
 
 static void finalize_filter_strings() {
@@ -807,15 +808,15 @@ int main(int argc, char *argv[]) {
                     char *autottl_copy = strdup(optarg);
                     if (strchr(autottl_copy, '-')) {
                         // token "-" found, start X-Y parser
-                        char *autottl_current = strtok(autottl_copy, "-");
+                        char *autottl_current = strtok_r(autottl_copy, "-");
                         auto_ttl_1 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok(NULL, "-");
+                        autottl_current = strtok_r(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
                         }
                         auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok(NULL, "-");
+                        autottl_current = strtok_r(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
