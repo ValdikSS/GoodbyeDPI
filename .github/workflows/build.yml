@@ -27,7 +27,6 @@ jobs:
         run: >
           sudo rm /var/lib/man-db/auto-update &&
           sudo DEBIAN_FRONTEND=noninteractive XZ_DEFAULTS="-T0" XZ_OPT="-T0" eatmydata
-          apt update
           apt install -y --no-install-recommends gcc-mingw-w64
 
       - name: Download WinDivert from cache
