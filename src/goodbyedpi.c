@@ -222,18 +222,17 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
 
 
 static void finalize_filter_strings() {
-    char *tmpstr;
+    char *newstr, *newstr2;
 
-    tmpstr = strdup(filter_string);
-    str_replace(tmpstr, IPID_TEMPLATE, "");
-    str_replace(tmpstr, MAXPAYLOADSIZE_TEMPLATE, "");
+    newstr2 = repl_str(filter_string, IPID_TEMPLATE, "");
+    newstr = repl_str(newstr2, MAXPAYLOADSIZE_TEMPLATE, "");
     free(filter_string);
-    filter_string = tmpstr;
+    free(newstr2);
+    filter_string = newstr;
 
-    tmpstr = strdup(filter_passive_string);
-    str_replace(tmpstr, IPID_TEMPLATE, "");
+    newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
     free(filter_passive_string);
-    filter_passive_string = tmpstr;
+    filter_passive_string = newstr;
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
