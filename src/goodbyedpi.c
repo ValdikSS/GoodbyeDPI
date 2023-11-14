@@ -234,7 +234,7 @@ static void finalize_filter_strings() {
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
-                         const char* needle, unsigned int nlen)
+                              const char* needle, unsigned int nlen)
 {
     if (nlen > hlen) return NULL;
     if (nlen == 0) return (char*)haystack;
@@ -243,17 +243,10 @@ static char* dumb_memmem(const char* haystack, unsigned int hlen,
     for (size_t i = 0; i < 256; ++i) skip[i] = nlen;
     for (size_t i = 0; i < nlen - 1; ++i) skip[(unsigned char)needle[i]] = nlen - i - 1;
 
-    size_t i = nlen - 1;
-    while (i < hlen) {
-        size_t j = nlen - 1;
-        while (j >= 0 && haystack[i] == needle[j]) {
-            --i;
-            --j;
+    for (size_t i = nlen - 1; i < hlen; i += skip[(unsigned char)haystack[i]]) {
+        if (memcmp(haystack + i - nlen + 1, needle, nlen) == 0) {
+            return (char*)(haystack + i - nlen + 1);
         }
-        if (j == (size_t)-1) {
-            return (char*)(haystack + i + 1);
-        }
-        i += skip[(unsigned char)haystack[i]];
     }
 
     return NULL;
