@@ -390,12 +390,11 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
  */
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
-    unsigned int ptr = 0;
     const unsigned char *d = (const unsigned char *)pktdata;
     const unsigned char *hnaddr = NULL;
-    int hnlen = 0;
+    size_t hnlen = 0;
 
-    while (ptr + 8 < pktlen) {
+    for (size_t ptr = 0; ptr + 8 < pktlen; ptr++) {
         if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
             d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
             d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
@@ -407,7 +406,7 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
                 return FALSE;
             }
 
-            for (int i = 0; i < hnlen; i++) {
+            for (size_t i = 0; i < hnlen; i++) {
                 if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
                       (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
                       hnaddr[i] == '.' || hnaddr[i] == '-'))
@@ -420,7 +419,6 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
             *hostnamelen = (unsigned int)hnlen;
             return TRUE;
         }
-        ptr++;
     }
 
     return FALSE;
