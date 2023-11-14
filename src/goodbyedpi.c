@@ -183,15 +183,13 @@ static void add_filter_str(int proto, int port) {
 
     const size_t udp_length = strlen(udp);
     const size_t tcp_length = strlen(tcp);
-    const size_t filter_string_length = strlen(filter_string);
 
-    size_t new_filter_size = filter_string_length + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
-    char *new_filter = malloc(new_filter_size);
+    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
+    char new_filter[new_filter_size];
 
-    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
+    snprintf(new_filter, new_filter_size, proto == IPPROTO_UDP ? udp : tcp, port, port);
 
-    free(filter_string);
-    filter_string = new_filter;
+    strcpy(filter_string, new_filter);
 }
 
 
@@ -213,7 +211,7 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
     const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
     char *addfilter;
 
-    asprintf(&addfilter, maxpayloadsize_str, maxpayload);
+    asprintf(&addfilter, "%s", maxpayloadsize_str, maxpayload);
 
     char *newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);
     free(filter_string);
@@ -222,10 +220,28 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
 }
 
 
+
 static void finalize_filter_strings() {
     char *newstr = repl_str(filter_string, IPID_TEMPLATE, "");
     free(filter_string);
-    filter_string = newstr;
+    filter_string = nstatic void add_maxpayloadsize_str(unsigned short maxpayload) {
+        const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
+        char addfilter[100]; // Assuming a fixed length for addfilter
+    
+        snprintf(addfilter, sizeof(addfilter), maxpayloadsize_str, maxpayload);
+    
+        char *substring_pos = strstr(filter_string, MAXPAYLOADSIZE_TEMPLATE);
+        if (substring_pos != NULL) {
+            size_t template_length = strlen(MAXPAYLOADSIZE_TEMPLATE);
+            size_t addfilter_length = strlen(addfilter);
+            size_t remaining_length = strlen(substring_pos + template_length);
+            
+            // Shift the remaining characters to the right
+            memmove(substring_pos + addfilter_length, substring_pos + template_length, remaining_length + 1);
+    
+            memcpy(substring_pos, addfilter, addfilter_length);
+        }
+    }ewstr;
 
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
     free(filter_passive_string);
@@ -242,10 +258,17 @@ static char* dumb_memmem(const char* haystack, unsigned int hlen,
     for (size_t i = 0; i < 256; ++i) skip[i] = nlen;
     for (size_t i = 0; i < nlen - 1; ++i) skip[(unsigned char)needle[i]] = nlen - i - 1;
 
-    for (size_t i = nlen - 1; i < hlen; i += skip[(unsigned char)haystack[i]]) {
-        if (memcmp(haystack + i - nlen + 1, needle, nlen) == 0) {
-            return (char*)(haystack + i - nlen + 1);
+    size_t i = nlen - 1;
+    while (i < hlen) {
+        size_t j = nlen - 1;
+        while (j >= 0 && haystack[i] == needle[j]) {
+            --i;
+            --j;
         }
+        if (j == (size_t)-1) {
+            return (char*)(haystack + i + 1);
+        }
+        i += skip[(unsigned char)haystack[i]];
     }
 
     return NULL;
@@ -386,23 +409,29 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
     const unsigned char *d = (const unsigned char *)pktdata;
     const unsigned char *hnaddr = NULL;
     int hnlen = 0;
+    unsigned int max_ptr = pktlen - 8;
 
-    while (ptr + 8 < pktlen) {
-        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
+    const unsigned char d_ptr = d[ptr];
+    const unsigned char d_ptr_plus_1 = d[ptr+1];
+    const unsigned char d_ptr_plus_8 = d[ptr+8];
+
+    while (ptr < max_ptr) {
+        if (d_ptr == '\0' && d_ptr_plus_1 == '\0' && d[ptr+2] == '\0' &&
             d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
-            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
+            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d_ptr_plus_8 == 3)
         {
             hnaddr = &d[ptr+9];
-            hnlen = d[ptr+8];
+            hnlen = d_ptr_plus_8;
 
             if (ptr + 8 + hnlen > pktlen || hnlen < 3 || hnlen > HOST_MAXLEN) {
                 return FALSE;
             }
 
             for (int i = 0; i < hnlen; i++) {
-                if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
-                      (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
-                      hnaddr[i] == '.' || hnaddr[i] == '-'))
+                const unsigned char hnaddr_i = hnaddr[i];
+                if (!((hnaddr_i >= '0' && hnaddr_i <= '9') ||
+                      (hnaddr_i >= 'a' && hnaddr_i <= 'z') ||
+                      hnaddr_i == '.' || hnaddr_i == '-'))
                 {
                     return FALSE;
                 }
@@ -413,6 +442,9 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
             return TRUE;
         }
         ptr++;
+        d_ptr = d[ptr];
+        d_ptr_plus_1 = d[ptr+1];
+        d_ptr_plus_8 = d[ptr+8];
     }
 
     return FALSE;
