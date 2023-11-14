@@ -183,13 +183,15 @@ static void add_filter_str(int proto, int port) {
 
     const size_t udp_length = strlen(udp);
     const size_t tcp_length = strlen(tcp);
+    const size_t filter_string_length = strlen(filter_string);
 
-    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
-    char new_filter[new_filter_size];
+    size_t new_filter_size = filter_string_length + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
+    char *new_filter = malloc(new_filter_size);
 
-    snprintf(new_filter, new_filter_size, proto == IPPROTO_UDP ? udp : tcp, port, port);
+    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
 
-    strcpy(filter_string, new_filter);
+    free(filter_string);
+    filter_string = new_filter;
 }
 
 
@@ -222,12 +224,8 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
 
 
 static void finalize_filter_strings() {
-    char *newstr, *newstr2;
-
-    newstr2 = repl_str(filter_string, IPID_TEMPLATE, "");
-    newstr = repl_str(newstr2, MAXPAYLOADSIZE_TEMPLATE, "");
+    char *newstr = repl_str(filter_string, IPID_TEMPLATE, "");
     free(filter_string);
-    free(newstr2);
     filter_string = newstr;
 
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
@@ -392,36 +390,23 @@ static int find_header_and_get_info(const char *pktdata, unsigned int pktlen,
  */
 static int extract_sni(const char *pktdata, unsigned int pktlen,
                     char **hostnameaddr, unsigned int *hostnamelen) {
-    unsigned int ptr = 0;
     const unsigned char *d = (const unsigned char *)pktdata;
     const unsigned char *hnaddr = NULL;
-    int hnlen = 0;
+    size_t hnlen = 0;
 
-    const unsigned char *end = d + pktlen - 8;
-
-    while (d + ptr < end) {
-        const unsigned char *current = d + ptr;
-
-        if (current[2] == '\0' &&
-            current[7] == '\0' &&
-            current[3] - current[5] == 2 &&
-            current[5] - current[8] == 3)
+    for (size_t ptr = 0; ptr + 8 < pktlen; ptr++) {
+        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
+            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
+            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
         {
-            const unsigned char *nameStart = current + 9;
-            int nameLength = current[8];
+            hnaddr = &d[ptr+9];
+            hnlen = d[ptr+8];
 
-            if (current + 8 + nameLength > d + pktlen) {
+            if (ptr + 8 + hnlen > pktlen || hnlen < 3 || hnlen > HOST_MAXLEN) {
                 return FALSE;
             }
 
-            hnaddr = nameStart;
-            hnlen = nameLength;
-
-            if (hnlen < 3 || hnlen > HOST_MAXLEN) {
-                return FALSE;
-            }
-
-            for (int i = 0; i < hnlen; i++) {
+            for (size_t i = 0; i < hnlen; i++) {
                 if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
                       (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
                       hnaddr[i] == '.' || hnaddr[i] == '-'))
@@ -434,12 +419,11 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
             *hostnamelen = (unsigned int)hnlen;
             return TRUE;
         }
-
-        ptr++;
     }
 
     return FALSE;
 }
+
 
 static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
     if (size >= 1 && size <= 0xFFFFu) {
