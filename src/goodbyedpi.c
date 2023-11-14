@@ -183,13 +183,15 @@ static void add_filter_str(int proto, int port) {
 
     const size_t udp_length = strlen(udp);
     const size_t tcp_length = strlen(tcp);
+    const size_t filter_string_length = strlen(filter_string);
 
-    size_t new_filter_size = strlen(filter_string) + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
-    char new_filter[new_filter_size];
+    size_t new_filter_size = filter_string_length + (proto == IPPROTO_UDP ? udp_length : tcp_length) + 16;
+    char *new_filter = malloc(new_filter_size);
 
-    snprintf(new_filter, new_filter_size, proto == IPPROTO_UDP ? udp : tcp, port, port);
+    sprintf(new_filter, proto == IPPROTO_UDP ? udp : tcp, port, port);
 
-    strcpy(filter_string, new_filter);
+    free(filter_string);
+    filter_string = new_filter;
 }
 
 
@@ -222,12 +224,8 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
 
 
 static void finalize_filter_strings() {
-    char *newstr, *newstr2;
-
-    newstr2 = repl_str(filter_string, IPID_TEMPLATE, "");
-    newstr = repl_str(newstr2, MAXPAYLOADSIZE_TEMPLATE, "");
+    char *newstr = repl_str(filter_string, IPID_TEMPLATE, "");
     free(filter_string);
-    free(newstr2);
     filter_string = newstr;
 
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
@@ -236,7 +234,7 @@ static void finalize_filter_strings() {
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
-                              const char* needle, unsigned int nlen)
+                         const char* needle, unsigned int nlen)
 {
     if (nlen > hlen) return NULL;
     if (nlen == 0) return (char*)haystack;
@@ -245,10 +243,17 @@ static char* dumb_memmem(const char* haystack, unsigned int hlen,
     for (size_t i = 0; i < 256; ++i) skip[i] = nlen;
     for (size_t i = 0; i < nlen - 1; ++i) skip[(unsigned char)needle[i]] = nlen - i - 1;
 
-    for (size_t i = nlen - 1; i < hlen; i += skip[(unsigned char)haystack[i]]) {
-        if (memcmp(haystack + i - nlen + 1, needle, nlen) == 0) {
-            return (char*)(haystack + i - nlen + 1);
+    size_t i = nlen - 1;
+    while (i < hlen) {
+        size_t j = nlen - 1;
+        while (j >= 0 && haystack[i] == needle[j]) {
+            --i;
+            --j;
         }
+        if (j == (size_t)-1) {
+            return (char*)(haystack + i + 1);
+        }
+        i += skip[(unsigned char)haystack[i]];
     }
 
     return NULL;
@@ -390,27 +395,15 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
     const unsigned char *hnaddr = NULL;
     int hnlen = 0;
 
-    const unsigned char *end = d + pktlen - 8;
-
-    while (d + ptr < end) {
-        const unsigned char *current = d + ptr;
-
-        if (current[2] == '\0' &&
-            current[7] == '\0' &&
-            current[3] - current[5] == 2 &&
-            current[5] - current[8] == 3)
+    while (ptr + 8 < pktlen) {
+        if (d[ptr] == '\0' && d[ptr+1] == '\0' && d[ptr+2] == '\0' &&
+            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
+            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d[ptr+8] == 3)
         {
-            const unsigned char *nameStart = current + 9;
-            int nameLength = current[8];
+            hnaddr = &d[ptr+9];
+            hnlen = d[ptr+8];
 
-            if (current + 8 + nameLength > d + pktlen) {
-                return FALSE;
-            }
-
-            hnaddr = nameStart;
-            hnlen = nameLength;
-
-            if (hnlen < 3 || hnlen > HOST_MAXLEN) {
+            if (ptr + 8 + hnlen > pktlen || hnlen < 3 || hnlen > HOST_MAXLEN) {
                 return FALSE;
             }
 
@@ -427,12 +420,12 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
             *hostnamelen = (unsigned int)hnlen;
             return TRUE;
         }
-
         ptr++;
     }
 
     return FALSE;
 }
+
 
 static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
     if (size >= 1 && size <= 0xFFFFu) {
