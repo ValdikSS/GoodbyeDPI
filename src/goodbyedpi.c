@@ -222,30 +222,18 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
 
 
 static void finalize_filter_strings() {
-    char *newstr = repl_str(filter_string, IPID_TEMPLATE, "");
-    free(filter_string);
-    filter_string = nstatic void add_maxpayloadsize_str(unsigned short maxpayload) {
-        const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
-        char addfilter[100]; // Assuming a fixed length for addfilter
-    
-        snprintf(addfilter, sizeof(addfilter), maxpayloadsize_str, maxpayload);
-    
-        char *substring_pos = strstr(filter_string, MAXPAYLOADSIZE_TEMPLATE);
-        if (substring_pos != NULL) {
-            size_t template_length = strlen(MAXPAYLOADSIZE_TEMPLATE);
-            size_t addfilter_length = strlen(addfilter);
-            size_t remaining_length = strlen(substring_pos + template_length);
-            
-            // Shift the remaining characters to the right
-            memmove(substring_pos + addfilter_length, substring_pos + template_length, remaining_length + 1);
-    
-            memcpy(substring_pos, addfilter, addfilter_length);
-        }
-    }ewstr;
+    char *tmpstr;
 
-    newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
+    tmpstr = strdup(filter_string);
+    str_replace(tmpstr, IPID_TEMPLATE, "");
+    str_replace(tmpstr, MAXPAYLOADSIZE_TEMPLATE, "");
+    free(filter_string);
+    filter_string = tmpstr;
+
+    tmpstr = strdup(filter_passive_string);
+    str_replace(tmpstr, IPID_TEMPLATE, "");
     free(filter_passive_string);
-    filter_passive_string = newstr;
+    filter_passive_string = tmpstr;
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
@@ -409,29 +397,35 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
     const unsigned char *d = (const unsigned char *)pktdata;
     const unsigned char *hnaddr = NULL;
     int hnlen = 0;
-    unsigned int max_ptr = pktlen - 8;
 
-    const unsigned char d_ptr = d[ptr];
-    const unsigned char d_ptr_plus_1 = d[ptr+1];
-    const unsigned char d_ptr_plus_8 = d[ptr+8];
+    const unsigned char *end = d + pktlen - 8;
 
-    while (ptr < max_ptr) {
-        if (d_ptr == '\0' && d_ptr_plus_1 == '\0' && d[ptr+2] == '\0' &&
-            d[ptr+4] == '\0' && d[ptr+6] == '\0' && d[ptr+7] == '\0' &&
-            d[ptr+3] - d[ptr+5] == 2 && d[ptr+5] - d_ptr_plus_8 == 3)
+    while (d + ptr < end) {
+        const unsigned char *current = d + ptr;
+
+        if (current[2] == '\0' &&
+            current[7] == '\0' &&
+            current[3] - current[5] == 2 &&
+            current[5] - current[8] == 3)
         {
-            hnaddr = &d[ptr+9];
-            hnlen = d_ptr_plus_8;
+            const unsigned char *nameStart = current + 9;
+            int nameLength = current[8];
 
-            if (ptr + 8 + hnlen > pktlen || hnlen < 3 || hnlen > HOST_MAXLEN) {
+            if (current + 8 + nameLength > d + pktlen) {
+                return FALSE;
+            }
+
+            hnaddr = nameStart;
+            hnlen = nameLength;
+
+            if (hnlen < 3 || hnlen > HOST_MAXLEN) {
                 return FALSE;
             }
 
             for (int i = 0; i < hnlen; i++) {
-                const unsigned char hnaddr_i = hnaddr[i];
-                if (!((hnaddr_i >= '0' && hnaddr_i <= '9') ||
-                      (hnaddr_i >= 'a' && hnaddr_i <= 'z') ||
-                      hnaddr_i == '.' || hnaddr_i == '-'))
+                if (!((hnaddr[i] >= '0' && hnaddr[i] <= '9') ||
+                      (hnaddr[i] >= 'a' && hnaddr[i] <= 'z') ||
+                      hnaddr[i] == '.' || hnaddr[i] == '-'))
                 {
                     return FALSE;
                 }
@@ -441,15 +435,12 @@ static int extract_sni(const char *pktdata, unsigned int pktlen,
             *hostnamelen = (unsigned int)hnlen;
             return TRUE;
         }
+
         ptr++;
-        d_ptr = d[ptr];
-        d_ptr_plus_1 = d[ptr+1];
-        d_ptr_plus_8 = d[ptr+8];
     }
 
     return FALSE;
 }
-
 
 static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned int size) {
     if (size >= 1 && size <= 0xFFFFu) {
