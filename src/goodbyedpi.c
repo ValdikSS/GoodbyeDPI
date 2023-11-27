@@ -428,12 +428,14 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 /* HTTP method end without trailing space */
 static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
     unsigned int i;
+    unsigned int pkt_length = strlen(pkt);
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         unsigned int method_length = strlen(http_methods[i]);
         if (memcmp(pkt, http_methods[i], method_length) == 0) {
             if (is_fragmented)
                 *is_fragmented = 0;
-            return (char*)pkt + method_length - 1;
+            if (method_length - 1 <= pkt_length)
+                return (char*)pkt + method_length - 1;
         }
         /* Try to find HTTP method in a second part of fragmented packet */
         if ((http_frag == 1 || http_frag == 2) &&
@@ -443,11 +445,13 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
         {
             if (is_fragmented)
                 *is_fragmented = 1;
-            return (char*)pkt + method_length - http_frag - 1;
+            if (method_length - http_frag - 1 <= pkt_length)
+                return (char*)pkt + method_length - http_frag - 1;
         }
     }
-    return (char*)pkt; 
+    return NULL;
 }
+
 
 
 
