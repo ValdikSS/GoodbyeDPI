@@ -426,8 +426,9 @@ static inline void change_window_size(const PWINDIVERT_TCPHDR ppTcpHdr, unsigned
 }
 
 /* HTTP method end without trailing space */
-static PVOID find_http_method_end(const char *pkt, size_t pkt_length, unsigned int http_frag, int *is_fragmented) {
+static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *is_fragmented) {
     unsigned int i;
+    unsigned int pkt_length = strlen(pkt);
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         unsigned int method_length = strlen(http_methods[i]);
         if (strncasecmp(pkt, http_methods[i], method_length) == 0) {
