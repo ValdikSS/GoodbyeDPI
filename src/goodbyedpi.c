@@ -446,7 +446,7 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
             return (char*)pkt + method_length - http_frag - 1;
         }
     }
-    return NULL;
+    return (char*)pkt; 
 }
 
 
