@@ -431,7 +431,7 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
     unsigned int pkt_length = strlen(pkt);
     for (i = 0; i<(sizeof(http_methods) / sizeof(*http_methods)); i++) {
         unsigned int method_length = strlen(http_methods[i]);
-        if (strncasecmp(pkt, http_methods[i], method_length) == 0) {
+        if (memcmp(pkt, http_methods[i], method_length) == 0) {
             if (is_fragmented)
                 *is_fragmented = 0;
             char *end = strchr(pkt + method_length, ' ');
@@ -440,7 +440,7 @@ static PVOID find_http_method_end(const char *pkt, unsigned int http_frag, int *
         }
         /* Try to find HTTP method in a second part of fragmented packet */
         if ((http_frag == 1 || http_frag == 2) &&
-            strncasecmp(pkt, http_methods[i] + http_frag,
+            memcmp(pkt, http_methods[i] + http_frag,
                         method_length - http_frag) == 0
            )
         {
@@ -815,15 +815,15 @@ int main(int argc, char *argv[]) {
                         // token "-" found, start X-Y parser
                         char *autottl_current;
                         char *saveptr; // declare a pointer to store the state of strtok_r
-                        autottl_current = strtok_r(autottl_copy, "-", &saveptr); // use strtok_r instead of strtok
+                        autottl_current = strtok_r(autottl_copy, "-", &saveptr); 
                         auto_ttl_1 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok_r(NULL, "-", &saveptr); // use strtok_r instead of strtok
+                        autottl_current = strtok_r(NULL, "-", &saveptr); 
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
                         }
                         auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
-                        autottl_current = strtok_r(NULL, "-", &saveptr); // use strtok_r instead of strtok
+                        autottl_current = strtok_r(NULL, "-", &saveptr); 
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
                             exit(EXIT_FAILURE);
