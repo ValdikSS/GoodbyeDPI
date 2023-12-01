@@ -238,13 +238,15 @@ static char* dumb_memmem(const char* haystack, unsigned int hlen,
     if (nlen > hlen) return NULL;
     if (nlen == 0) return (char*)haystack;
 
-    unsigned int skip[256];
-    for (size_t i = 0; i < 256; ++i) skip[i] = nlen;
-    for (size_t i = 0; i < nlen - 1; ++i) skip[(unsigned char)needle[i]] = nlen - i - 1;
+    for (unsigned int i = 0; i <= hlen - nlen; i++) {
+        for (unsigned int j = 0; j < nlen; j++) {
+            if (haystack[i + j] != needle[j]) {
+                break;
+            }
 
-    for (size_t i = nlen - 1; i < hlen; i += skip[(unsigned char)haystack[i]]) {
-        if (memcmp(haystack + i - nlen + 1, needle, nlen) == 0) {
-            return (char*)(haystack + i - nlen + 1);
+            if (j == nlen - 1) {
+                return (char*)(haystack + i);
+            }
         }
     }
 
