@@ -48,7 +48,7 @@ jobs:
       - name: Compile x86_64
         run: >
           cd src && make clean &&
-          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4 -O3 -march=native
+          make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4 OPTIMIZATION_FLAGS="-O3 -march=native -flto"
       
       - name: Prepare x86_64 directory
         run: |
@@ -64,7 +64,7 @@ jobs:
       - name: Compile i686
         run: >
           cd src && make clean &&
-          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x86 -j4 -O3 -march=native
+          make CPREFIX=i686-w64-mingw32- WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x86 -j4 OPTIMIZATION_FLAGS="-O3 -march=native -flto"
 
       - name: Prepare x86 directory
         run: |
