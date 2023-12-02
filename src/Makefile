@@ -12,7 +12,7 @@ TARGET = goodbyedpi.exe
 LIBS = -L$(WINDIVERTLIBS) -lWinDivert -lws2_32 -l:libssp.a
 CC = $(CPREFIX)gcc
 CCWINDRES = $(CPREFIX)windres
-CFLAGS = -std=c++23 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
+CFLAGS = -std=c23 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -O2 -D_FORTIFY_SOURCE=2 -fstack-protector \
          -Wall -Wextra -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 \
          -Wformat-security -Wno-format-nonliteral -Wshadow -Wstrict-aliasing=1 \
