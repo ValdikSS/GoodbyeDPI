@@ -80,7 +80,7 @@ Modern modesets (more stable, more compatible, faster):
  -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload
 ```
 
-To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
+To check if your ISP's DPI could be circumvented, first make sure that your provider can not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
 
 * **Chrome**: Settings → [Privacy and security](chrome://settings/security) → Use secure DNS → With: NextDNS
 * **Firefox**: [Settings](about:preferences) → Network Settings → Enable DNS over HTTPS → Use provider: NextDNS
