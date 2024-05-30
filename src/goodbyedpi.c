@@ -161,6 +161,7 @@ static struct option long_options[] = {
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
+    {"whitelist",   required_argument, 0,  't' },
     {"allow-no-sni",no_argument,       0,  ']' },
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
@@ -566,7 +567,8 @@ int main(int argc, char *argv[]) {
         do_http_allports = 0,
         do_host_mixedcase = 0,
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
-        do_dns_verb = 0, do_tcp_verb = 0, do_blacklist = 0,
+        do_dns_verb = 0, do_tcp_verb = 0,
+        do_blacklist = 0, do_whitelist = 0,
         do_allow_no_sni = 0,
         do_fake_packet = 0,
         do_auto_ttl = 0,
@@ -798,8 +800,15 @@ int main(int argc, char *argv[]) {
                 break;
             case 'b': // --blacklist
                 do_blacklist = 1;
-                if (!blackwhitelist_load_list(optarg)) {
+                if (!blackwhitelist_load_blacklist(optarg)) {
                     printf("Can't load blacklist from file!\n");
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 't': // --whitelist
+                do_whitelist = 1;
+                if (!blackwhitelist_load_whitelist(optarg)) {
+                    printf("Can't load whitelist from file!\n");
                     exit(EXIT_FAILURE);
                 }
                 break;
@@ -897,6 +906,9 @@ int main(int argc, char *argv[]) {
                 " --dns-verb               print verbose DNS redirection messages\n"
                 " --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from\n"
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
+                "                          This option can be supplied multiple times.\n"
+                " --whitelist   <txtfile>  does not perform circumvention tricks to host names and subdomains from\n"
+                "                          supplied text file.\n"
                 "                          This option can be supplied multiple times.\n"
                 " --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
@@ -1131,16 +1143,17 @@ int main(int argc, char *argv[]) {
                     if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
                         (packet_dataLen >= 3 && ( memcmp(packet_data, "\x16\x03\x01", 3) == 0 || memcmp(packet_data, "\x16\x03\x03", 3) == 0 )))
                     {
-                        if (do_blacklist) {
+                        if (do_blacklist || do_whitelist) {
                             sni_ok = extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
                         }
                         if (
-                             (do_blacklist && sni_ok &&
-                              blackwhitelist_check_hostname(host_addr, host_len)
+                             ((do_blacklist && sni_ok &&
+                              blackwhitelist_check_hostname_blacklist(host_addr, host_len)
                              ) ||
                              (do_blacklist && !sni_ok && do_allow_no_sni) ||
-                             (!do_blacklist)
+                             (!do_blacklist)) &&
+                             (do_whitelist ? !blackwhitelist_check_hostname_whitelist(host_addr, host_len) : 1)
                            )
                         {
 #ifdef DEBUG
@@ -1176,7 +1189,8 @@ int main(int argc, char *argv[]) {
                     if (find_header_and_get_info(packet_data, packet_dataLen,
                         http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len) &&
                         hdr_value_len > 0 && hdr_value_len <= HOST_MAXLEN &&
-                        (do_blacklist ? blackwhitelist_check_hostname(hdr_value_addr, hdr_value_len) : 1))
+                        (do_blacklist ? blackwhitelist_check_hostname_blacklist(hdr_value_addr, hdr_value_len) : 1) &&
+                        (do_whitelist ? !blackwhitelist_check_hostname_whitelist(hdr_value_addr, hdr_value_len) : 1))
                     {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
