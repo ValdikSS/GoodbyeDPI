@@ -1129,7 +1129,7 @@ int main(int argc, char *argv[]) {
                      * But if the packet is more than 2 bytes, check ClientHello byte.
                     */
                     if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
-                        (packet_dataLen >= 3 && memcmp(packet_data, "\x16\x03\x01", 3) == 0))
+                        (packet_dataLen >= 3 && ( memcmp(packet_data, "\x16\x03\x01", 3) == 0 || memcmp(packet_data, "\x16\x03\x03", 3) == 0 )))
                     {
                         if (do_blacklist) {
                             sni_ok = extract_sni(packet_data, packet_dataLen,
