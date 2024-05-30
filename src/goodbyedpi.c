@@ -162,6 +162,7 @@ static struct option long_options[] = {
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
     {"allow-no-sni",no_argument,       0,  ']' },
+    {"frag-by-sni", no_argument,       0,  '>' },
     {"ip-id",       required_argument, 0,  'i' },
     {"set-ttl",     required_argument, 0,  '$' },
     {"min-ttl",     required_argument, 0,  '[' },
@@ -568,6 +569,7 @@ int main(int argc, char *argv[]) {
         do_dnsv4_redirect = 0, do_dnsv6_redirect = 0,
         do_dns_verb = 0, do_tcp_verb = 0, do_blacklist = 0,
         do_allow_no_sni = 0,
+        do_fragment_by_sni = 0,
         do_fake_packet = 0,
         do_auto_ttl = 0,
         do_wrong_chksum = 0,
@@ -806,6 +808,9 @@ int main(int argc, char *argv[]) {
             case ']': // --allow-no-sni
                 do_allow_no_sni = 1;
                 break;
+            case '>': // --frag-by-sni
+                do_fragment_by_sni = 1;
+                break;
             case '$': // --set-ttl
                 do_auto_ttl = auto_ttl_1 = auto_ttl_2 = auto_ttl_max = 0;
                 do_fake_packet = 1;
@@ -899,6 +904,7 @@ int main(int argc, char *argv[]) {
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
                 "                          This option can be supplied multiple times.\n"
                 " --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.\n"
+                " --frag-by-sni            if SNI is detected in TLS packet, fragment the packet right before SNI value.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
                 "                          DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).\n"
                 " --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease\n"
@@ -957,6 +963,7 @@ int main(int argc, char *argv[]) {
            "Fragment HTTP: %u\n"                    /* 2 */
            "Fragment persistent HTTP: %u\n"         /* 3 */
            "Fragment HTTPS: %u\n"                   /* 4 */
+           "Fragment by SNI: %u\n"                  /* 5 */
            "Native fragmentation (splitting): %d\n" /* 5 */
            "Fragments sending in reverse: %d\n"     /* 6 */
            "hoSt: %d\n"                             /* 7 */
@@ -976,23 +983,24 @@ int main(int argc, char *argv[]) {
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
            (do_fragment_https ? https_fragment_size : 0),         /* 4 */
-           do_native_frag,        /* 5 */
-           do_reverse_frag,       /* 6 */
-           do_host,               /* 7 */
-           do_host_removespace,   /* 8 */
-           do_additional_space,   /* 9 */
-           do_host_mixedcase,     /* 10 */
-           do_http_allports,      /* 11 */
-           do_fragment_http_persistent_nowait, /* 12 */
-           do_dnsv4_redirect,                  /* 13 */
-           do_dnsv6_redirect,                  /* 14 */
-           do_allow_no_sni,                    /* 15 */
-           do_auto_ttl ? "auto" : (do_fake_packet ? "fixed" : "disabled"),  /* 16 */
+           do_fragment_by_sni,    /* 5 */
+           do_native_frag,        /* 6 */
+           do_reverse_frag,       /* 7 */
+           do_host,               /* 8 */
+           do_host_removespace,   /* 9 */
+           do_additional_space,   /* 10 */
+           do_host_mixedcase,     /* 11 */
+           do_http_allports,      /* 12 */
+           do_fragment_http_persistent_nowait, /* 13 */
+           do_dnsv4_redirect,                  /* 14 */
+           do_dnsv6_redirect,                  /* 15 */
+           do_allow_no_sni,                    /* 16 */
+           do_auto_ttl ? "auto" : (do_fake_packet ? "fixed" : "disabled"),  /* 17 */
                ttl_of_fake_packet, do_auto_ttl ? auto_ttl_1 : 0, do_auto_ttl ? auto_ttl_2 : 0,
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
-           do_wrong_chksum, /* 17 */
-           do_wrong_seq,    /* 18 */
-           max_payload_size /* 19 */
+           do_wrong_chksum, /* 18 */
+           do_wrong_seq,    /* 19 */
+           max_payload_size /* 20 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
@@ -1046,6 +1054,7 @@ int main(int argc, char *argv[]) {
                    packetLen);
             should_reinject = 1;
             should_recalc_checksum = 0;
+            sni_ok = 0;
 
             ppIpHdr = (PWINDIVERT_IPHDR)NULL;
             ppIpV6Hdr = (PWINDIVERT_IPV6HDR)NULL;
@@ -1131,7 +1140,7 @@ int main(int argc, char *argv[]) {
                     if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
                         (packet_dataLen >= 3 && ( memcmp(packet_data, "\x16\x03\x01", 3) == 0 || memcmp(packet_data, "\x16\x03\x03", 3) == 0 )))
                     {
-                        if (do_blacklist) {
+                        if (do_blacklist || do_fragment_by_sni) {
                             sni_ok = extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
                         }
@@ -1284,7 +1293,11 @@ int main(int argc, char *argv[]) {
                         current_fragment_size = http_fragment_size;
                     }
                     else if (do_fragment_https && ppTcpHdr->DstPort != htons(80)) {
-                        current_fragment_size = https_fragment_size;
+                        if (do_fragment_by_sni && sni_ok) {
+                            current_fragment_size = (void*)host_addr - packet_data;
+                        } else {
+                            current_fragment_size = https_fragment_size;
+                        }
                     }
 
                     if (current_fragment_size) {

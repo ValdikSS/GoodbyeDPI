@@ -43,6 +43,7 @@ Usage: goodbyedpi.exe [OPTION...]
                           supplied text file (HTTP Host/TLS SNI).
                           This option can be supplied multiple times.
  --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.
+ --frag-by-sni            if SNI is detected in TLS packet, fragment the packet right before SNI value.
  --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.
                           DANGEROUS! May break websites in unexpected ways. Use with care (or --blacklist).
  --auto-ttl    [a1-a2-m]  activate Fake Request Mode, automatically detect TTL and decrease
