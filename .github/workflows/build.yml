@@ -16,7 +16,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Declare short commit variable
         id: vars
@@ -31,7 +31,7 @@ jobs:
 
       - name: Download WinDivert from cache
         id: windivert-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ${{ env. WINDIVERT_NAME }}
           key: ${{ env. WINDIVERT_SHA256 }}
@@ -49,14 +49,14 @@ jobs:
         run: >
           cd src && make clean &&
           make CPREFIX=x86_64-w64-mingw32- BIT64=1 WINDIVERTHEADERS=../${{ env.WINDIVERT_BASENAME }}/include WINDIVERTLIBS=../${{ env.WINDIVERT_BASENAME }}/x64 -j4
-      
+
       - name: Prepare x86_64 directory
         run: |
           mkdir goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x64/*.{dll,sys} goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86_64
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_64_${{ steps.vars.outputs.sha_short }}
@@ -72,7 +72,7 @@ jobs:
           cp src/goodbyedpi.exe ${{ env.WINDIVERT_BASENAME }}/x86/*.{dll,sys} goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
 
       - name: Upload output file x86
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
           path: goodbyedpi_x86_${{ steps.vars.outputs.sha_short }}
