@@ -21,7 +21,7 @@ jobs:
       - name: Declare short commit variable
         id: vars
         run: |
-          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       - name: Install MinGW-w64
         run: >
