@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 env:
-  WINDIVERT_URL: https://reqrypt.org/download/WinDivert-2.2.2-A.zip
-  WINDIVERT_NAME: WinDivert-2.2.2-A.zip
-  WINDIVERT_BASENAME: WinDivert-2.2.2-A
-  WINDIVERT_SHA256: 63cb41763bb4b20f600b6de04e991a9c2be73279e317d4d82f237b150c5f3f15
+  WINDIVERT_URL: https://reqrypt.org/download/WinDivert-2.2.0-D.zip
+  WINDIVERT_NAME: WinDivert-2.2.0-D.zip
+  WINDIVERT_BASENAME: WinDivert-2.2.0-D
+  WINDIVERT_SHA256: 1d461cfdfa7ba88ebcfbb3603b71b703e9f72aba8aeff99a75ce293e6f89d2ba
 
 jobs:
   build:
