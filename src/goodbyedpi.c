@@ -78,6 +78,9 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
          "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
          "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
         "))"
+#define FILTER_PASSIVE_BLOCK_QUIC "outbound and !impostor and !loopback and udp " \
+        "and udp.DstPort == 443 and udp.PayloadLength >= 1200 " \
+        "and udp.Payload[0] >= 0xC0 and udp.Payload32[1b] == 0x01"
 #define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
         "!impostor and !loopback and " \
         "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
@@ -559,7 +562,8 @@ int main(int argc, char *argv[]) {
     conntrack_info_t dns_conn_info;
     tcp_conntrack_info_t tcp_conn_info;
 
-    int do_passivedpi = 0, do_fragment_http = 0,
+    int do_passivedpi = 0, do_block_quic = 0,
+        do_fragment_http = 0,
         do_fragment_http_persistent = 0,
         do_fragment_http_persistent_nowait = 0,
         do_fragment_https = 0, do_host = 0,
@@ -641,7 +645,7 @@ int main(int argc, char *argv[]) {
         max_payload_size = 1200;
     }
 
-    while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "123456pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -684,6 +688,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'p':
                 do_passivedpi = 1;
+                break;
+            case 'q':
+                do_block_quic = 1;
                 break;
             case 'r':
                 do_host = 1;
@@ -884,6 +891,7 @@ int main(int argc, char *argv[]) {
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
+                " -q          block QUIC/HTTP3\n"
                 " -r          replace Host with hoSt\n"
                 " -s          remove space between host header and its value\n"
                 " -a          additional space between Method and Request-URI (enables -s, may break sites)\n"
@@ -960,6 +968,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Block passive: %d\n"                    /* 1 */
+           "Block QUIC/HTTP3: %d\n"                 /* 1 */
            "Fragment HTTP: %u\n"                    /* 2 */
            "Fragment persistent HTTP: %u\n"         /* 3 */
            "Fragment HTTPS: %u\n"                   /* 4 */
@@ -979,7 +988,7 @@ int main(int argc, char *argv[]) {
            "Fake requests, wrong checksum: %d\n"    /* 17 */
            "Fake requests, wrong SEQ/ACK: %d\n"     /* 18 */
            "Max payload size: %hu\n",               /* 19 */
-           do_passivedpi,                                         /* 1 */
+           do_passivedpi, do_block_quic,                          /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
            (do_fragment_https ? https_fragment_size : 0),         /* 4 */
@@ -1025,6 +1034,15 @@ int main(int argc, char *argv[]) {
         /* IPv4 only filter for inbound RST packets with ID [0x0; 0xF] */
         filters[filter_num] = init(
             filter_passive_string,
+            WINDIVERT_FLAG_DROP);
+        if (filters[filter_num] == NULL)
+            die();
+        filter_num++;
+    }
+
+    if (do_block_quic) {
+        filters[filter_num] = init(
+            FILTER_PASSIVE_BLOCK_QUIC,
             WINDIVERT_FLAG_DROP);
         if (filters[filter_num] == NULL)
             die();

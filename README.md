@@ -22,6 +22,7 @@ Download [latest version from Releases page](https://github.com/ValdikSS/Goodbye
 ```
 Usage: goodbyedpi.exe [OPTION...]
  -p          block passive DPI
+ -q          block QUIC/HTTP3
  -r          replace Host with hoSt
  -s          remove space between host header and its value
  -m          mix Host header case (test.com -> tEsT.cOm)
