@@ -638,13 +638,15 @@ int main(int argc, char *argv[]) {
     );
 
     if (argc == 1) {
-        /* enable mode -5 by default */
+        /* enable mode -9 by default */
         do_fragment_http = do_fragment_https = 1;
         do_reverse_frag = do_native_frag = 1;
         http_fragment_size = https_fragment_size = 2;
         do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
         do_fake_packet = 1;
-        do_auto_ttl = 1;
+        do_wrong_chksum = 1;
+        do_wrong_seq = 1;
+        do_block_quic = 1;
         max_payload_size = 1200;
     }
 
@@ -964,11 +966,11 @@ int main(int argc, char *argv[]) {
                 " -4          -p -r -s (best speed)"
                 "\n"
                 "Modern modesets (more stable, more compatible, faster):\n"
-                " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)\n"
+                " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload\n"
                 " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n"
                 " -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload\n"
                 " -8          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload\n"
-                " -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q\n\n"
+                " -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q (this is the default)\n\n"
                 "Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.\n"
                 );
                 exit(EXIT_FAILURE);
