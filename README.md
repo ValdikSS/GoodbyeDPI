@@ -141,7 +141,7 @@ Modify them according to your own needs.
 
 # Similar projects
 
-- **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for Linux)
+- **[zapret](https://github.com/bol-van/zapret)** by @bol-van (for MacOS, Linux and Windows)
 - **[Green Tunnel](https://github.com/SadeghHayeri/GreenTunnel)** by @SadeghHayeri (for MacOS, Linux and Windows)
 - **[DPI Tunnel CLI](https://github.com/zhenyolka/DPITunnel-cli)** by @zhenyolka (for Linux and routers)
 - **[DPI Tunnel for Android](https://github.com/zhenyolka/DPITunnel-android)** by @zhenyolka (for Android)
