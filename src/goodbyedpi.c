@@ -648,7 +648,7 @@ int main(int argc, char *argv[]) {
         max_payload_size = 1200;
     }
 
-    while ((opt = getopt_long(argc, argv, "123456pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "1234567pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -687,6 +687,15 @@ int main(int argc, char *argv[]) {
                 do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
                 do_fake_packet = 1;
                 do_wrong_seq = 1;
+                max_payload_size = 1200;
+                break;
+            case '7':
+                do_fragment_http = do_fragment_https = 1;
+                do_reverse_frag = do_native_frag = 1;
+                http_fragment_size = https_fragment_size = 2;
+                do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
+                do_fake_packet = 1;
+                do_wrong_chksum = 1;
                 max_payload_size = 1200;
                 break;
             case 'p':
@@ -950,7 +959,9 @@ int main(int argc, char *argv[]) {
                 "\n"
                 "Modern modesets (more stable, more compatible, faster):\n"
                 " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)\n"
-                " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n");
+                " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n"
+                " -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload\n"
+                );
                 exit(EXIT_FAILURE);
         }
     }

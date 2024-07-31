@@ -80,6 +80,7 @@ LEGACY modesets:
 Modern modesets (more stable, more compatible, faster):
  -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)
  -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload
+ -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload
 ```
 
 To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
