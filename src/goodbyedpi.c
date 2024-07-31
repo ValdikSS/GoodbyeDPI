@@ -648,7 +648,7 @@ int main(int argc, char *argv[]) {
         max_payload_size = 1200;
     }
 
-    while ((opt = getopt_long(argc, argv, "1234567pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "123456789pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -689,6 +689,12 @@ int main(int argc, char *argv[]) {
                 do_wrong_seq = 1;
                 max_payload_size = 1200;
                 break;
+            case '9': // +7+8
+                do_block_quic = 1;
+                // fall through
+            case '8': // +7
+                do_wrong_seq = 1;
+                // fall through
             case '7':
                 do_fragment_http = do_fragment_https = 1;
                 do_reverse_frag = do_native_frag = 1;
@@ -961,6 +967,9 @@ int main(int argc, char *argv[]) {
                 " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)\n"
                 " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n"
                 " -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload\n"
+                " -8          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload\n"
+                " -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q\n\n"
+                "Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.\n"
                 );
                 exit(EXIT_FAILURE);
         }
