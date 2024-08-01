@@ -15,6 +15,8 @@ It handles DPI connected using optical splitter or port mirroring (**Passive DPI
 These scripts launch GoodbyeDPI in recommended mode with DNS resolver redirection to Yandex DNS on non-standard port (to prevent DNS poisoning).  
 If it works — congratulations! You can use it as-is or configure further.
 
+You need to use main.exe to start the program in the tray, and then you can select the desired .cmd to run it. You can modify config.json to change the settings.
+
 # How to use
 
 Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases) and run.
