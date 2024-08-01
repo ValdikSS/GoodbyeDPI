@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **USE THIS FORM ONLY FOR BUGS**
+        ### USE THIS FORM ONLY FOR BUGS! The webside does not open? That's likely NOT a bug, do not report it here!
         GoodbyeDPI does not guarantee to work with your ISP for every blocked website or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it here.
 
         Please only report software bugs, such as:
@@ -18,7 +18,7 @@ body:
         Please make sure to check other opened and closed issues, it could be your bug has been reported already.
         For questions, or if in doubt, [use NTC.party forum](https://ntc.party/c/community-software/goodbyedpi).
 
-        **ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ**
+        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда!
         GoodbyeDPI не гарантирует ни 100% работу с вашим провайдером, ни работу с каждым заблокированным сайтом. Если GoodbyeDPI не разблокирует доступ к некоторым или всем веб-сайтам, вероятнее всего, это не программная ошибка, и не стоит о ней сообщать здесь.
 
         Пожалуйста, сообщайте только об ошибках в программе, таких как:
