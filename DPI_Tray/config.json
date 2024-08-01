@@ -1,0 +1,36 @@
+{
+    "1_russia_blacklist": {
+        "dns_addr": "",
+        "dns_port": "",
+        "dnsv6_addr": "",
+        "dnsv6_port": "",
+        "blacklist": [
+            "../russia-blacklist.txt",
+            "../russia-youtube.txt"
+        ]
+    },
+    "1_russia_blacklist_dnsredir": {
+        "dns_addr": "77.88.8.8",
+        "dns_port": "1253",
+        "dnsv6_addr": "2a02:6b8::feed:0ff",
+        "dnsv6_port": "1253",
+        "blacklist": [
+            "../russia-blacklist.txt",
+            "../russia-youtube.txt"
+        ]
+    },
+    "2_any_country": {
+        "dns_addr": "",
+        "dns_port": "",
+        "dnsv6_addr": "",
+        "dnsv6_port": "",
+        "blacklist": []
+    },
+    "2_any_country_dnsredir": {
+        "dns_addr": "77.88.8.8",
+        "dns_port": "1253",
+        "dnsv6_addr": "2a02:6b8::feed:0ff",
+        "dnsv6_port": "1253",
+        "blacklist": []
+    }
+}
