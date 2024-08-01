@@ -1,0 +1,11 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/GoodbyedpiWithTray/FileContentIndex/5386b2f3-9e28-4b7c-a4d0-a15bfa15905c.vsidx
+/.vs/GoodbyedpiWithTray/v17
+/.vs/GoodbyedpiWithTray/FileContentIndex/f4bc5ed2-c14c-42e7-8795-37c9721ed127.vsidx
+/.vs/VSWorkspaceState.json
+/.vs/GoodbyedpiWithTray/FileContentIndex
+*.json
+/.vs/slnx.sqlite
