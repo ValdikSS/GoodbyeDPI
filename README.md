@@ -17,6 +17,11 @@ If it works — congratulations! You can use it as-is or configure further.
 
 You need to use main.exe to start the program in the tray, and then you can select the desired .cmd to run it. You can modify config.json to change the settings.
 
+Tray icon when the application is off:
+![Off](src_Tray/icons/icon-off.jpg) <br>
+Tray icon when the application is on:
+![On](src_Tray/icons/icon-on.png)
+
 # How to use
 
 Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases) and run.
