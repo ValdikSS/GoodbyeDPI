@@ -469,3 +469,229 @@
 2024-08-01 22:37:13,551 - INFO - The process has been successfully completed.
 2024-08-01 22:37:16,875 - INFO - Process terminated on exit.
 2024-08-01 22:37:16,882 - INFO - Application has stopped.
+2024-08-01 23:53:52,944 - INFO - Application started.
+2024-08-01 23:53:52,954 - DEBUG - Importing BlpImagePlugin
+2024-08-01 23:53:52,955 - DEBUG - Importing BmpImagePlugin
+2024-08-01 23:53:52,955 - DEBUG - Importing BufrStubImagePlugin
+2024-08-01 23:53:52,955 - DEBUG - Importing CurImagePlugin
+2024-08-01 23:53:52,956 - DEBUG - Importing DcxImagePlugin
+2024-08-01 23:53:52,956 - DEBUG - Importing DdsImagePlugin
+2024-08-01 23:53:52,958 - DEBUG - Importing EpsImagePlugin
+2024-08-01 23:53:52,959 - DEBUG - Importing FitsImagePlugin
+2024-08-01 23:53:52,960 - DEBUG - Importing FliImagePlugin
+2024-08-01 23:53:52,960 - DEBUG - Importing FpxImagePlugin
+2024-08-01 23:53:52,960 - DEBUG - Image: failed to import FpxImagePlugin: No module named 'olefile'
+2024-08-01 23:53:52,960 - DEBUG - Importing FtexImagePlugin
+2024-08-01 23:53:52,961 - DEBUG - Importing GbrImagePlugin
+2024-08-01 23:53:52,961 - DEBUG - Importing GifImagePlugin
+2024-08-01 23:53:52,961 - DEBUG - Importing GribStubImagePlugin
+2024-08-01 23:53:52,961 - DEBUG - Importing Hdf5StubImagePlugin
+2024-08-01 23:53:52,961 - DEBUG - Importing IcnsImagePlugin
+2024-08-01 23:53:52,962 - DEBUG - Importing IcoImagePlugin
+2024-08-01 23:53:52,963 - DEBUG - Importing ImImagePlugin
+2024-08-01 23:53:52,963 - DEBUG - Importing ImtImagePlugin
+2024-08-01 23:53:52,963 - DEBUG - Importing IptcImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Importing JpegImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Importing Jpeg2KImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Importing McIdasImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Importing MicImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Image: failed to import MicImagePlugin: No module named 'olefile'
+2024-08-01 23:53:52,964 - DEBUG - Importing MpegImagePlugin
+2024-08-01 23:53:52,964 - DEBUG - Importing MpoImagePlugin
+2024-08-01 23:53:52,967 - DEBUG - Importing MspImagePlugin
+2024-08-01 23:53:52,968 - DEBUG - Importing PalmImagePlugin
+2024-08-01 23:53:52,968 - DEBUG - Importing PcdImagePlugin
+2024-08-01 23:53:52,969 - DEBUG - Importing PcxImagePlugin
+2024-08-01 23:53:52,969 - DEBUG - Importing PdfImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing PixarImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing PngImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing PpmImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing PsdImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing QoiImagePlugin
+2024-08-01 23:53:52,973 - DEBUG - Importing SgiImagePlugin
+2024-08-01 23:53:52,974 - DEBUG - Importing SpiderImagePlugin
+2024-08-01 23:53:52,974 - DEBUG - Importing SunImagePlugin
+2024-08-01 23:53:52,974 - DEBUG - Importing TgaImagePlugin
+2024-08-01 23:53:52,975 - DEBUG - Importing TiffImagePlugin
+2024-08-01 23:53:52,975 - DEBUG - Importing WebPImagePlugin
+2024-08-01 23:53:52,975 - DEBUG - Importing WmfImagePlugin
+2024-08-01 23:53:52,976 - DEBUG - Importing XbmImagePlugin
+2024-08-01 23:53:52,976 - DEBUG - Importing XpmImagePlugin
+2024-08-01 23:53:52,977 - DEBUG - Importing XVThumbImagePlugin
+2024-08-01 23:53:54,213 - INFO - Executing command: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-01 23:53:54,216 - INFO - Executed: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-01 23:53:54,216 - DEBUG - STREAM b'IHDR' 16 13
+2024-08-01 23:53:54,216 - DEBUG - STREAM b'sRGB' 41 1
+2024-08-01 23:53:54,216 - DEBUG - STREAM b'gAMA' 54 4
+2024-08-01 23:53:54,217 - DEBUG - STREAM b'pHYs' 70 9
+2024-08-01 23:53:54,217 - DEBUG - STREAM b'IDAT' 91 5737
+2024-08-02 00:52:23,922 - INFO - Process terminated on exit.
+2024-08-02 00:52:23,934 - INFO - Application has stopped.
+2024-08-02 00:54:12,227 - INFO - Application started.
+2024-08-02 00:54:12,252 - DEBUG - Importing BlpImagePlugin
+2024-08-02 00:54:12,252 - DEBUG - Importing BmpImagePlugin
+2024-08-02 00:54:12,252 - DEBUG - Importing BufrStubImagePlugin
+2024-08-02 00:54:12,253 - DEBUG - Importing CurImagePlugin
+2024-08-02 00:54:12,253 - DEBUG - Importing DcxImagePlugin
+2024-08-02 00:54:12,253 - DEBUG - Importing DdsImagePlugin
+2024-08-02 00:54:12,256 - DEBUG - Importing EpsImagePlugin
+2024-08-02 00:54:12,256 - DEBUG - Importing FitsImagePlugin
+2024-08-02 00:54:12,257 - DEBUG - Importing FliImagePlugin
+2024-08-02 00:54:12,257 - DEBUG - Importing FpxImagePlugin
+2024-08-02 00:54:12,257 - DEBUG - Image: failed to import FpxImagePlugin: No module named 'olefile'
+2024-08-02 00:54:12,257 - DEBUG - Importing FtexImagePlugin
+2024-08-02 00:54:12,258 - DEBUG - Importing GbrImagePlugin
+2024-08-02 00:54:12,258 - DEBUG - Importing GifImagePlugin
+2024-08-02 00:54:12,258 - DEBUG - Importing GribStubImagePlugin
+2024-08-02 00:54:12,258 - DEBUG - Importing Hdf5StubImagePlugin
+2024-08-02 00:54:12,259 - DEBUG - Importing IcnsImagePlugin
+2024-08-02 00:54:12,259 - DEBUG - Importing IcoImagePlugin
+2024-08-02 00:54:12,260 - DEBUG - Importing ImImagePlugin
+2024-08-02 00:54:12,260 - DEBUG - Importing ImtImagePlugin
+2024-08-02 00:54:12,260 - DEBUG - Importing IptcImagePlugin
+2024-08-02 00:54:12,261 - DEBUG - Importing JpegImagePlugin
+2024-08-02 00:54:12,261 - DEBUG - Importing Jpeg2KImagePlugin
+2024-08-02 00:54:12,261 - DEBUG - Importing McIdasImagePlugin
+2024-08-02 00:54:12,261 - DEBUG - Importing MicImagePlugin
+2024-08-02 00:54:12,261 - DEBUG - Image: failed to import MicImagePlugin: No module named 'olefile'
+2024-08-02 00:54:12,261 - DEBUG - Importing MpegImagePlugin
+2024-08-02 00:54:12,262 - DEBUG - Importing MpoImagePlugin
+2024-08-02 00:54:12,284 - DEBUG - Importing MspImagePlugin
+2024-08-02 00:54:12,284 - DEBUG - Importing PalmImagePlugin
+2024-08-02 00:54:12,285 - DEBUG - Importing PcdImagePlugin
+2024-08-02 00:54:12,285 - DEBUG - Importing PcxImagePlugin
+2024-08-02 00:54:12,285 - DEBUG - Importing PdfImagePlugin
+2024-08-02 00:54:12,289 - DEBUG - Importing PixarImagePlugin
+2024-08-02 00:54:12,289 - DEBUG - Importing PngImagePlugin
+2024-08-02 00:54:12,289 - DEBUG - Importing PpmImagePlugin
+2024-08-02 00:54:12,289 - DEBUG - Importing PsdImagePlugin
+2024-08-02 00:54:12,290 - DEBUG - Importing QoiImagePlugin
+2024-08-02 00:54:12,290 - DEBUG - Importing SgiImagePlugin
+2024-08-02 00:54:12,290 - DEBUG - Importing SpiderImagePlugin
+2024-08-02 00:54:12,290 - DEBUG - Importing SunImagePlugin
+2024-08-02 00:54:12,291 - DEBUG - Importing TgaImagePlugin
+2024-08-02 00:54:12,291 - DEBUG - Importing TiffImagePlugin
+2024-08-02 00:54:12,291 - DEBUG - Importing WebPImagePlugin
+2024-08-02 00:54:12,305 - DEBUG - Importing WmfImagePlugin
+2024-08-02 00:54:12,305 - DEBUG - Importing XbmImagePlugin
+2024-08-02 00:54:12,306 - DEBUG - Importing XpmImagePlugin
+2024-08-02 00:54:12,306 - DEBUG - Importing XVThumbImagePlugin
+2024-08-02 00:54:13,685 - INFO - Executing command: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-02 00:54:13,688 - INFO - Executed: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-02 00:54:13,688 - DEBUG - STREAM b'IHDR' 16 13
+2024-08-02 00:54:13,688 - DEBUG - STREAM b'sRGB' 41 1
+2024-08-02 00:54:13,688 - DEBUG - STREAM b'gAMA' 54 4
+2024-08-02 00:54:13,689 - DEBUG - STREAM b'pHYs' 70 9
+2024-08-02 00:54:13,689 - DEBUG - STREAM b'IDAT' 91 5737
+2024-08-02 00:54:41,099 - INFO - The process has been successfully completed.
+2024-08-02 00:54:43,205 - INFO - Process terminated on exit.
+2024-08-02 00:54:43,218 - INFO - Application has stopped.
+2024-08-02 00:58:27,178 - INFO - Application started.
+2024-08-02 00:58:27,190 - DEBUG - Importing BlpImagePlugin
+2024-08-02 00:58:27,191 - DEBUG - Importing BmpImagePlugin
+2024-08-02 00:58:27,191 - DEBUG - Importing BufrStubImagePlugin
+2024-08-02 00:58:27,191 - DEBUG - Importing CurImagePlugin
+2024-08-02 00:58:27,191 - DEBUG - Importing DcxImagePlugin
+2024-08-02 00:58:27,192 - DEBUG - Importing DdsImagePlugin
+2024-08-02 00:58:27,194 - DEBUG - Importing EpsImagePlugin
+2024-08-02 00:58:27,195 - DEBUG - Importing FitsImagePlugin
+2024-08-02 00:58:27,195 - DEBUG - Importing FliImagePlugin
+2024-08-02 00:58:27,196 - DEBUG - Importing FpxImagePlugin
+2024-08-02 00:58:27,196 - DEBUG - Image: failed to import FpxImagePlugin: No module named 'olefile'
+2024-08-02 00:58:27,196 - DEBUG - Importing FtexImagePlugin
+2024-08-02 00:58:27,196 - DEBUG - Importing GbrImagePlugin
+2024-08-02 00:58:27,197 - DEBUG - Importing GifImagePlugin
+2024-08-02 00:58:27,197 - DEBUG - Importing GribStubImagePlugin
+2024-08-02 00:58:27,197 - DEBUG - Importing Hdf5StubImagePlugin
+2024-08-02 00:58:27,197 - DEBUG - Importing IcnsImagePlugin
+2024-08-02 00:58:27,198 - DEBUG - Importing IcoImagePlugin
+2024-08-02 00:58:27,198 - DEBUG - Importing ImImagePlugin
+2024-08-02 00:58:27,199 - DEBUG - Importing ImtImagePlugin
+2024-08-02 00:58:27,199 - DEBUG - Importing IptcImagePlugin
+2024-08-02 00:58:27,199 - DEBUG - Importing JpegImagePlugin
+2024-08-02 00:58:27,199 - DEBUG - Importing Jpeg2KImagePlugin
+2024-08-02 00:58:27,199 - DEBUG - Importing McIdasImagePlugin
+2024-08-02 00:58:27,200 - DEBUG - Importing MicImagePlugin
+2024-08-02 00:58:27,200 - DEBUG - Image: failed to import MicImagePlugin: No module named 'olefile'
+2024-08-02 00:58:27,200 - DEBUG - Importing MpegImagePlugin
+2024-08-02 00:58:27,200 - DEBUG - Importing MpoImagePlugin
+2024-08-02 00:58:27,206 - DEBUG - Importing MspImagePlugin
+2024-08-02 00:58:27,206 - DEBUG - Importing PalmImagePlugin
+2024-08-02 00:58:27,206 - DEBUG - Importing PcdImagePlugin
+2024-08-02 00:58:27,207 - DEBUG - Importing PcxImagePlugin
+2024-08-02 00:58:27,207 - DEBUG - Importing PdfImagePlugin
+2024-08-02 00:58:27,211 - DEBUG - Importing PixarImagePlugin
+2024-08-02 00:58:27,211 - DEBUG - Importing PngImagePlugin
+2024-08-02 00:58:27,211 - DEBUG - Importing PpmImagePlugin
+2024-08-02 00:58:27,211 - DEBUG - Importing PsdImagePlugin
+2024-08-02 00:58:27,211 - DEBUG - Importing QoiImagePlugin
+2024-08-02 00:58:27,212 - DEBUG - Importing SgiImagePlugin
+2024-08-02 00:58:27,212 - DEBUG - Importing SpiderImagePlugin
+2024-08-02 00:58:27,212 - DEBUG - Importing SunImagePlugin
+2024-08-02 00:58:27,212 - DEBUG - Importing TgaImagePlugin
+2024-08-02 00:58:27,213 - DEBUG - Importing TiffImagePlugin
+2024-08-02 00:58:27,213 - DEBUG - Importing WebPImagePlugin
+2024-08-02 00:58:27,214 - DEBUG - Importing WmfImagePlugin
+2024-08-02 00:58:27,214 - DEBUG - Importing XbmImagePlugin
+2024-08-02 00:58:27,215 - DEBUG - Importing XpmImagePlugin
+2024-08-02 00:58:27,215 - DEBUG - Importing XVThumbImagePlugin
+2024-08-02 00:58:29,354 - INFO - Executing command: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-02 00:58:29,357 - INFO - Executed: x86_64\goodbyedpi.exe -9 --blacklist russia-blacklist.txt --blacklist russia-youtube.txt
+2024-08-02 00:58:29,358 - DEBUG - STREAM b'IHDR' 16 13
+2024-08-02 00:58:29,358 - DEBUG - STREAM b'sRGB' 41 1
+2024-08-02 00:58:29,358 - DEBUG - STREAM b'gAMA' 54 4
+2024-08-02 00:58:29,358 - DEBUG - STREAM b'pHYs' 70 9
+2024-08-02 00:58:29,358 - DEBUG - STREAM b'IDAT' 91 5737
+2024-08-02 00:58:36,925 - INFO - The process has been successfully completed.
+2024-08-02 00:58:38,746 - INFO - Process terminated on exit.
+2024-08-02 00:58:38,760 - INFO - Application has stopped.
+2024-08-02 00:58:40,479 - INFO - Application started.
+2024-08-02 00:58:40,491 - DEBUG - Importing BlpImagePlugin
+2024-08-02 00:58:40,491 - DEBUG - Importing BmpImagePlugin
+2024-08-02 00:58:40,491 - DEBUG - Importing BufrStubImagePlugin
+2024-08-02 00:58:40,492 - DEBUG - Importing CurImagePlugin
+2024-08-02 00:58:40,492 - DEBUG - Importing DcxImagePlugin
+2024-08-02 00:58:40,493 - DEBUG - Importing DdsImagePlugin
+2024-08-02 00:58:40,495 - DEBUG - Importing EpsImagePlugin
+2024-08-02 00:58:40,495 - DEBUG - Importing FitsImagePlugin
+2024-08-02 00:58:40,496 - DEBUG - Importing FliImagePlugin
+2024-08-02 00:58:40,496 - DEBUG - Importing FpxImagePlugin
+2024-08-02 00:58:40,497 - DEBUG - Image: failed to import FpxImagePlugin: No module named 'olefile'
+2024-08-02 00:58:40,497 - DEBUG - Importing FtexImagePlugin
+2024-08-02 00:58:40,497 - DEBUG - Importing GbrImagePlugin
+2024-08-02 00:58:40,497 - DEBUG - Importing GifImagePlugin
+2024-08-02 00:58:40,497 - DEBUG - Importing GribStubImagePlugin
+2024-08-02 00:58:40,498 - DEBUG - Importing Hdf5StubImagePlugin
+2024-08-02 00:58:40,498 - DEBUG - Importing IcnsImagePlugin
+2024-08-02 00:58:40,499 - DEBUG - Importing IcoImagePlugin
+2024-08-02 00:58:40,499 - DEBUG - Importing ImImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing ImtImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing IptcImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing JpegImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing Jpeg2KImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing McIdasImagePlugin
+2024-08-02 00:58:40,500 - DEBUG - Importing MicImagePlugin
+2024-08-02 00:58:40,501 - DEBUG - Image: failed to import MicImagePlugin: No module named 'olefile'
+2024-08-02 00:58:40,501 - DEBUG - Importing MpegImagePlugin
+2024-08-02 00:58:40,501 - DEBUG - Importing MpoImagePlugin
+2024-08-02 00:58:40,504 - DEBUG - Importing MspImagePlugin
+2024-08-02 00:58:40,504 - DEBUG - Importing PalmImagePlugin
+2024-08-02 00:58:40,505 - DEBUG - Importing PcdImagePlugin
+2024-08-02 00:58:40,505 - DEBUG - Importing PcxImagePlugin
+2024-08-02 00:58:40,505 - DEBUG - Importing PdfImagePlugin
+2024-08-02 00:58:40,509 - DEBUG - Importing PixarImagePlugin
+2024-08-02 00:58:40,509 - DEBUG - Importing PngImagePlugin
+2024-08-02 00:58:40,510 - DEBUG - Importing PpmImagePlugin
+2024-08-02 00:58:40,510 - DEBUG - Importing PsdImagePlugin
+2024-08-02 00:58:40,510 - DEBUG - Importing QoiImagePlugin
+2024-08-02 00:58:40,510 - DEBUG - Importing SgiImagePlugin
+2024-08-02 00:58:40,510 - DEBUG - Importing SpiderImagePlugin
+2024-08-02 00:58:40,511 - DEBUG - Importing SunImagePlugin
+2024-08-02 00:58:40,511 - DEBUG - Importing TgaImagePlugin
+2024-08-02 00:58:40,511 - DEBUG - Importing TiffImagePlugin
+2024-08-02 00:58:40,511 - DEBUG - Importing WebPImagePlugin
+2024-08-02 00:58:40,512 - DEBUG - Importing WmfImagePlugin
+2024-08-02 00:58:40,512 - DEBUG - Importing XbmImagePlugin
+2024-08-02 00:58:40,513 - DEBUG - Importing XpmImagePlugin
+2024-08-02 00:58:40,513 - DEBUG - Importing XVThumbImagePlugin
+2024-08-02 00:58:44,994 - INFO - Application has stopped.

@@ -5,6 +5,7 @@ import platform
 import json
 import os
 import logging
+import sys
 
 process = None
 
@@ -14,6 +15,8 @@ ICON_OFF_PATH = os.path.join(ICONS_DIR, "icon-off.jpg")
 ICON_ON_PATH = os.path.join(ICONS_DIR, "icon-on.png")
 
 LOG_FILE_PATH = "app.log"
+LOCK_FILE_PATH = "app.lock"
+
 logging.basicConfig(filename=LOG_FILE_PATH, level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -136,6 +139,9 @@ def exit_program(icon, item):
         print('Process terminated on exit.')
         logging.info('Process terminated on exit.')
 
+    if os.path.exists(LOCK_FILE_PATH):
+        os.remove(LOCK_FILE_PATH)
+
     icon.stop()
 
 
@@ -153,7 +159,24 @@ def create_icon():
     return icon
 
 
+def check_if_running():
+    """Check if another instance is running by checking for the existence of the lock file"""
+    return os.path.exists(LOCK_FILE_PATH)
+
+
+def create_lock_file():
+    """Create a lock file to indicate the application is running"""
+    with open(LOCK_FILE_PATH, 'w') as lock_file:
+        lock_file.write(str(os.getpid()))
+
+
 if __name__ == "__main__":
+    if check_if_running():
+        print("Another instance is already running.")
+        sys.exit(1)
+
+    create_lock_file()
+
     print("Starting the application...")
     logging.info('Application started.')
 
@@ -162,3 +185,6 @@ if __name__ == "__main__":
 
     print("Application has stopped.")
     logging.info('Application has stopped.')
+
+    if os.path.exists(LOCK_FILE_PATH):
+        os.remove(LOCK_FILE_PATH)
