@@ -294,7 +294,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                   FORMAT_MESSAGE_IGNORE_INSERTS,
                   NULL, errorcode, MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
                   (LPTSTR)&errormessage, 0, NULL);
-    printf("Error opening filter: %s", errormessage);
+    printf("Error opening filter: %d %s\n", errorcode, errormessage);
     LocalFree(errormessage);
     if (errorcode == 2)
         printf("The driver files WinDivert32.sys or WinDivert64.sys were not found.\n");
