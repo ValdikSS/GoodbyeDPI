@@ -9,3 +9,4 @@
 /.vs/GoodbyedpiWithTray/FileContentIndex
 *.json
 /.vs/slnx.sqlite
+/DPI_Tray/_internal/psutil/_psutil_windows.pyd
