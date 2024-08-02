@@ -981,21 +981,21 @@ int main(int argc, char *argv[]) {
            "Fragment persistent HTTP: %u\n"         /* 3 */
            "Fragment HTTPS: %u\n"                   /* 4 */
            "Fragment by SNI: %u\n"                  /* 5 */
-           "Native fragmentation (splitting): %d\n" /* 5 */
-           "Fragments sending in reverse: %d\n"     /* 6 */
-           "hoSt: %d\n"                             /* 7 */
-           "Host no space: %d\n"                    /* 8 */
-           "Additional space: %d\n"                 /* 9 */
-           "Mix Host: %d\n"                         /* 10 */
-           "HTTP AllPorts: %d\n"                    /* 11 */
-           "HTTP Persistent Nowait: %d\n"           /* 12 */
-           "DNS redirect: %d\n"                     /* 13 */
-           "DNSv6 redirect: %d\n"                   /* 14 */
-           "Allow missing SNI: %d\n"                /* 15 */
-           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 16 */
-           "Fake requests, wrong checksum: %d\n"    /* 17 */
-           "Fake requests, wrong SEQ/ACK: %d\n"     /* 18 */
-           "Max payload size: %hu\n",               /* 19 */
+           "Native fragmentation (splitting): %d\n" /* 6 */
+           "Fragments sending in reverse: %d\n"     /* 7 */
+           "hoSt: %d\n"                             /* 8 */
+           "Host no space: %d\n"                    /* 9 */
+           "Additional space: %d\n"                 /* 10 */
+           "Mix Host: %d\n"                         /* 11 */
+           "HTTP AllPorts: %d\n"                    /* 12 */
+           "HTTP Persistent Nowait: %d\n"           /* 13 */
+           "DNS redirect: %d\n"                     /* 14 */
+           "DNSv6 redirect: %d\n"                   /* 15 */
+           "Allow missing SNI: %d\n"                /* 16 */
+           "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 17 */
+           "Fake requests, wrong checksum: %d\n"    /* 18 */
+           "Fake requests, wrong SEQ/ACK: %d\n"     /* 19 */
+           "Max payload size: %hu\n",               /* 20 */
            do_passivedpi,                                         /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
