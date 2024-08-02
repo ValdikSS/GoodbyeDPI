@@ -296,8 +296,25 @@ static HANDLE init(char *filter, UINT64 flags) {
                   (LPTSTR)&errormessage, 0, NULL);
     printf("Error opening filter: %s", errormessage);
     LocalFree(errormessage);
-    if (errorcode == 577)
-        printf("Windows Server 2016 systems must have secure boot disabled to be "
+    if (errorcode == 2)
+        printf("The driver files WinDivert32.sys or WinDivert64.sys were not found.\n");
+    else if (errorcode == 654)
+        printf("An incompatible version of the WinDivert driver is currently loaded.\n"
+               "Please unload it with the following commands ran as administrator:\n\n"
+               "sc stop windivert\n"
+               "sc delete windivert\n"
+               "sc stop windivert14"
+               "sc delete windivert14\n");
+    else if (errorcode == 1275)
+        printf("This error occurs for various reasons, including:\n"
+               "the WinDivert driver is blocked by security software; or\n"
+               "you are using a virtualization environment that does not support drivers.\n");
+    else if (errorcode == 1753)
+        printf("This error occurs when the Base Filtering Engine service has been disabled.\n"
+               "Enable Base Filtering Engine service.\n");
+    else if (errorcode == 577)
+        printf("Could not load driver due to invalid digital signature.\n"
+               "Windows Server 2016 systems must have secure boot disabled to be \n"
                "able to load WinDivert driver.\n"
                "Windows 7 systems must be up-to-date or at least have KB3033929 installed.\n"
                "https://www.microsoft.com/en-us/download/details.aspx?id=46078\n\n"
