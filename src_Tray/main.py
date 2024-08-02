@@ -6,6 +6,7 @@ import json
 import os
 import logging
 import sys
+import psutil
 
 process = None
 
@@ -159,13 +160,34 @@ def create_icon():
     return icon
 
 
+def get_existing_pid():
+    """Get the PID from the lock file, if it exists."""
+    if os.path.exists(LOCK_FILE_PATH):
+        with open(LOCK_FILE_PATH, 'r') as lock_file:
+            pid = lock_file.read().strip()
+            return int(pid) if pid.isdigit() else None
+    return None
+
+
+def is_process_running(pid):
+    """Check if a process with the given PID is currently running."""
+    try:
+        process = psutil.Process(pid)
+        return process.is_running()
+    except psutil.NoSuchProcess:
+        return False
+
+
 def check_if_running():
-    """Check if another instance is running by checking for the existence of the lock file"""
-    return os.path.exists(LOCK_FILE_PATH)
+    """Check if another instance is running by checking the lock file."""
+    pid = get_existing_pid()
+    if pid and is_process_running(pid):
+        return True
+    return False
 
 
 def create_lock_file():
-    """Create a lock file to indicate the application is running"""
+    """Create a lock file with the current process ID."""
     with open(LOCK_FILE_PATH, 'w') as lock_file:
         lock_file.write(str(os.getpid()))
 
