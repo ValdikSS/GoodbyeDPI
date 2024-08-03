@@ -11,9 +11,9 @@ body:
     id: ensure
     attributes:
       label: I've made sure there's no existing feature request / Я убедился, что такой функциональности еще никто не предлагал
-    options:
-      - label: I've made sure there's no existing feature request / Я убедился, что такой функциональности еще никто не предлагал
-        required: true
+      options:
+        - label: I've made sure there's no existing feature request / Я убедился, что такой функциональности еще никто не предлагал
+          required: true
   - type: textarea
     id: description
     attributes:
