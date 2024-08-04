@@ -23,7 +23,7 @@
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
 
-#define GOODBYEDPI_VERSION "v0.2.2"
+#define GOODBYEDPI_VERSION "v0.2.3"
 
 #define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
@@ -78,6 +78,9 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
          "(tcp.DstPort == 80 or tcp.DstPort == 443) and tcp.Ack and " \
          "(" DIVERT_NO_LOCALNETSv4_DST " or " DIVERT_NO_LOCALNETSv6_DST "))" \
         "))"
+#define FILTER_PASSIVE_BLOCK_QUIC "outbound and !impostor and !loopback and udp " \
+        "and udp.DstPort == 443 and udp.PayloadLength >= 1200 " \
+        "and udp.Payload[0] >= 0xC0 and udp.Payload32[1b] == 0x01"
 #define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
         "!impostor and !loopback and " \
         "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
@@ -218,7 +221,10 @@ static void add_ip_id_str(int id) {
 static void add_maxpayloadsize_str(unsigned short maxpayload) {
     char *newstr;
     /* 0x47455420 is "GET ", 0x504F5354 is "POST", big endian. */
-    const char *maxpayloadsize_str = "and (tcp.PayloadLength ? tcp.PayloadLength < %hu or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 : true)";
+    const char *maxpayloadsize_str =
+        "and (tcp.PayloadLength ? tcp.PayloadLength < %hu " \
+          "or tcp.Payload32[0] == 0x47455420 or tcp.Payload32[0] == 0x504F5354 " \
+          "or (tcp.Payload[0] == 0x16 and tcp.Payload[1] == 0x03 and tcp.Payload[2] <= 0x03): true)";
     char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
     sprintf(addfilter, maxpayloadsize_str, maxpayload);
@@ -576,7 +582,8 @@ int main(int argc, char *argv[]) {
     conntrack_info_t dns_conn_info;
     tcp_conntrack_info_t tcp_conn_info;
 
-    int do_passivedpi = 0, do_fragment_http = 0,
+    int do_passivedpi = 0, do_block_quic = 0,
+        do_fragment_http = 0,
         do_fragment_http_persistent = 0,
         do_fragment_http_persistent_nowait = 0,
         do_fragment_https = 0, do_host = 0,
@@ -648,17 +655,19 @@ int main(int argc, char *argv[]) {
     );
 
     if (argc == 1) {
-        /* enable mode -5 by default */
+        /* enable mode -9 by default */
         do_fragment_http = do_fragment_https = 1;
         do_reverse_frag = do_native_frag = 1;
         http_fragment_size = https_fragment_size = 2;
         do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
         do_fake_packet = 1;
-        do_auto_ttl = 1;
+        do_wrong_chksum = 1;
+        do_wrong_seq = 1;
+        do_block_quic = 1;
         max_payload_size = 1200;
     }
 
-    while ((opt = getopt_long(argc, argv, "123456prsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "123456789pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -699,8 +708,26 @@ int main(int argc, char *argv[]) {
                 do_wrong_seq = 1;
                 max_payload_size = 1200;
                 break;
+            case '9': // +7+8
+                do_block_quic = 1;
+                // fall through
+            case '8': // +7
+                do_wrong_seq = 1;
+                // fall through
+            case '7':
+                do_fragment_http = do_fragment_https = 1;
+                do_reverse_frag = do_native_frag = 1;
+                http_fragment_size = https_fragment_size = 2;
+                do_fragment_http_persistent = do_fragment_http_persistent_nowait = 1;
+                do_fake_packet = 1;
+                do_wrong_chksum = 1;
+                max_payload_size = 1200;
+                break;
             case 'p':
                 do_passivedpi = 1;
+                break;
+            case 'q':
+                do_block_quic = 1;
                 break;
             case 'r':
                 do_host = 1;
@@ -901,6 +928,7 @@ int main(int argc, char *argv[]) {
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
+                " -q          block QUIC/HTTP3\n"
                 " -r          replace Host with hoSt\n"
                 " -s          remove space between host header and its value\n"
                 " -a          additional space between Method and Request-URI (enables -s, may break sites)\n"
@@ -955,8 +983,13 @@ int main(int argc, char *argv[]) {
                 " -4          -p -r -s (best speed)"
                 "\n"
                 "Modern modesets (more stable, more compatible, faster):\n"
-                " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)\n"
-                " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n");
+                " -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload\n"
+                " -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload\n"
+                " -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload\n"
+                " -8          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload\n"
+                " -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q (this is the default)\n\n"
+                "Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.\n"
+                );
                 exit(EXIT_FAILURE);
         }
     }
@@ -977,6 +1010,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Block passive: %d\n"                    /* 1 */
+           "Block QUIC/HTTP3: %d\n"                 /* 1 */
            "Fragment HTTP: %u\n"                    /* 2 */
            "Fragment persistent HTTP: %u\n"         /* 3 */
            "Fragment HTTPS: %u\n"                   /* 4 */
@@ -996,7 +1030,7 @@ int main(int argc, char *argv[]) {
            "Fake requests, wrong checksum: %d\n"    /* 18 */
            "Fake requests, wrong SEQ/ACK: %d\n"     /* 19 */
            "Max payload size: %hu\n",               /* 20 */
-           do_passivedpi,                                         /* 1 */
+           do_passivedpi, do_block_quic,                          /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
            (do_fragment_https ? https_fragment_size : 0),         /* 4 */
@@ -1042,6 +1076,15 @@ int main(int argc, char *argv[]) {
         /* IPv4 only filter for inbound RST packets with ID [0x0; 0xF] */
         filters[filter_num] = init(
             filter_passive_string,
+            WINDIVERT_FLAG_DROP);
+        if (filters[filter_num] == NULL)
+            die();
+        filter_num++;
+    }
+
+    if (do_block_quic) {
+        filters[filter_num] = init(
+            FILTER_PASSIVE_BLOCK_QUIC,
             WINDIVERT_FLAG_DROP);
         if (filters[filter_num] == NULL)
             die();

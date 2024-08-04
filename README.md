@@ -22,6 +22,7 @@ Download [latest version from Releases page](https://github.com/ValdikSS/Goodbye
 ```
 Usage: goodbyedpi.exe [OPTION...]
  -p          block passive DPI
+ -q          block QUIC/HTTP3
  -r          replace Host with hoSt
  -s          remove space between host header and its value
  -m          mix Host header case (test.com -> tEsT.cOm)
@@ -77,8 +78,13 @@ LEGACY modesets:
  -4          -p -r -s (best speed)
 
 Modern modesets (more stable, more compatible, faster):
- -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload (this is the default)
+ -5          -f 2 -e 2 --auto-ttl --reverse-frag --max-payload
  -6          -f 2 -e 2 --wrong-seq --reverse-frag --max-payload
+ -7          -f 2 -e 2 --wrong-chksum --reverse-frag --max-payload
+ -8          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload
+ -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q (this is the default)
+
+ Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.
 ```
 
 To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
