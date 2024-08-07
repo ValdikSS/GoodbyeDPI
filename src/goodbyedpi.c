@@ -23,7 +23,7 @@
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
 
-#define GOODBYEDPI_VERSION "v0.2.3"
+#define GOODBYEDPI_VERSION "v0.2.4"
 
 #define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
@@ -187,6 +187,7 @@ static struct option long_options[] = {
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
+    {"no-console",  optional_argument, 0,  'c' },
     {0,             0,                 0,   0  }
 };
 
@@ -937,6 +938,10 @@ int main(int argc, char *argv[]) {
                 else
                     max_payload_size = 1200;
                 break;
+            case 'c': // --no-console
+                if (GetConsoleWindow() != NULL)
+                    FreeConsole();
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -987,6 +992,7 @@ int main(int argc, char *argv[]) {
                 "                          (like file transfers) in already established sessions.\n"
                 "                          May skip some huge HTTP requests from being processed.\n"
                 "                          Default (if set): --max-payload 1200.\n"
+                " --no-console             Hides console window :)\n"
                 "\n");
                 puts("LEGACY modesets:\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)\n"
