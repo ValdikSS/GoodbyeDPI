@@ -134,7 +134,16 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
              ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq); \
 } while (0)
 
-
+static const int ERROR_DEFAULT=EXIT_FAILURE
+static const int ERROR_PORT_BOUNDS=EXIT_FAILURE+1
+static const int ERROR_DNS_V4_ADDR=EXIT_FAILURE+2
+static const int ERROR_DNS_V6_ADDR=EXIT_FAILURE+3
+static const int ERROR_DNS_V4_PORT=EXIT_FAILURE+4
+static const int ERROR_DNS_V6_PORT=EXIT_FAILURE+5
+static const int ERROR_BLACKLIST_LOAD=EXIT_FAILURE+6
+static const int ERROR_AUTOTTL=EXIT_FAILURE+7
+static const int ERROR_ATOUSI=EXIT_FAILURE+8
+static const int ERROR_AUTOB=EXIT_FAILURE+9
 static int running_from_service = 0;
 static int exiting = 0;
 static HANDLE filters[MAX_FILTERS];
@@ -270,7 +279,7 @@ unsigned short int atousi(const char *str, const char *msg) {
 
     if(res > limitValue) {
         puts(msg);
-        exit(EXIT_FAILURE);
+        exit(ERROR_ATOUSI);
     }
     return (unsigned short int)res;
 }
@@ -283,7 +292,7 @@ BYTE atoub(const char *str, const char *msg) {
 
     if(res > limitValue) {
         puts(msg);
-        exit(EXIT_FAILURE);
+        exit(ERROR_AUTOB);
     }
     return (BYTE)res;
 }
@@ -768,7 +777,7 @@ int main(int argc, char *argv[]) {
                 i = atoi(optarg);
                 if (i <= 0 || i > 65535) {
                     printf("Port parameter error!\n");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_PORT_BOUNDS);
                 }
                 if (i != 80 && i != 443)
                     add_filter_str(IPPROTO_TCP, i);
@@ -787,14 +796,14 @@ int main(int argc, char *argv[]) {
                     do_dnsv4_redirect = 1;
                     if (inet_pton(AF_INET, optarg, &dnsv4_addr) != 1) {
                         puts("DNS address parameter error!");
-                        exit(EXIT_FAILURE);
+                        exit(ERROR_DNS_V4_ADDR);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
                     flush_dns_cache();
                     break;
                 }
                 puts("DNS address parameter error!");
-                exit(EXIT_FAILURE);
+                exit(ERROR_DNS_V4_ADDR);
                 break;
             case '!': // --dnsv6-addr
                 if ((inet_pton(AF_INET6, optarg, dns_temp_addr.s6_addr) == 1) &&
@@ -803,21 +812,21 @@ int main(int argc, char *argv[]) {
                     do_dnsv6_redirect = 1;
                     if (inet_pton(AF_INET6, optarg, dnsv6_addr.s6_addr) != 1) {
                         puts("DNS address parameter error!");
-                        exit(EXIT_FAILURE);
+                        exit(ERROR_DNS_V6_ADDR);
                     }
                     add_filter_str(IPPROTO_UDP, 53);
                     flush_dns_cache();
                     break;
                 }
                 puts("DNS address parameter error!");
-                exit(EXIT_FAILURE);
+                exit(ERROR_DNS_V6_ADDR);
                 break;
             case 'g': // --dns-port
                 if (!do_dnsv4_redirect) {
                     puts("--dns-port should be used with --dns-addr!\n"
                         "Make sure you use --dns-addr and pass it before "
                         "--dns-port");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_DNS_V4_PORT);
                 }
                 dnsv4_port = atousi(optarg, "DNS port parameter error!");
                 if (dnsv4_port != 53) {
@@ -830,7 +839,7 @@ int main(int argc, char *argv[]) {
                     puts("--dnsv6-port should be used with --dnsv6-addr!\n"
                         "Make sure you use --dnsv6-addr and pass it before "
                         "--dnsv6-port");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_DNS_V6_PORT);
                 }
                 dnsv6_port = atousi(optarg, "DNS port parameter error!");
                 if (dnsv6_port != 53) {
@@ -846,7 +855,7 @@ int main(int argc, char *argv[]) {
                 do_blacklist = 1;
                 if (!blackwhitelist_load_list(optarg)) {
                     printf("Can't load blacklist from file!\n");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_BLACKLIST_LOAD);
                 }
                 break;
             case ']': // --allow-no-sni
@@ -880,13 +889,13 @@ int main(int argc, char *argv[]) {
                         autottl_current = strtok(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
-                            exit(EXIT_FAILURE);
+                            exit(ERROR_AUTOTTL);
                         }
                         auto_ttl_2 = atoub(autottl_current, "Set Auto TTL parameter error!");
                         autottl_current = strtok(NULL, "-");
                         if (!autottl_current) {
                             puts("Set Auto TTL parameter error!");
-                            exit(EXIT_FAILURE);
+                            exit(ERROR_AUTOTTL);
                         }
                         auto_ttl_max = atoub(autottl_current, "Set Auto TTL parameter error!");
                     }
@@ -990,7 +999,7 @@ int main(int argc, char *argv[]) {
                 " -9          -f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload -q (this is the default)\n\n"
                 "Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.\n"
                 );
-                exit(EXIT_FAILURE);
+                exit(ERROR_DEFAULT);
         }
     }
 
