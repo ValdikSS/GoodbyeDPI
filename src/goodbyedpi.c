@@ -133,17 +133,18 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
         func(w_filter, &addr, packet, packetLen, packet_v6, \
              ttl_of_fake_packet, do_wrong_chksum, do_wrong_seq); \
 } while (0)
-
-static const int ERROR_DEFAULT=EXIT_FAILURE
-static const int ERROR_PORT_BOUNDS=EXIT_FAILURE+1
-static const int ERROR_DNS_V4_ADDR=EXIT_FAILURE+2
-static const int ERROR_DNS_V6_ADDR=EXIT_FAILURE+3
-static const int ERROR_DNS_V4_PORT=EXIT_FAILURE+4
-static const int ERROR_DNS_V6_PORT=EXIT_FAILURE+5
-static const int ERROR_BLACKLIST_LOAD=EXIT_FAILURE+6
-static const int ERROR_AUTOTTL=EXIT_FAILURE+7
-static const int ERROR_ATOUSI=EXIT_FAILURE+8
-static const int ERROR_AUTOB=EXIT_FAILURE+9
+enum ERROR_CODE{
+ERROR_DEFAULT=1,
+ERROR_PORT_BOUNDS=ERROR_DEFAULT+1,
+ERROR_DNS_V4_ADDR=ERROR_DEFAULT+2,
+ERROR_DNS_V6_ADDR=ERROR_DEFAULT+3,
+ERROR_DNS_V4_PORT=ERROR_DEFAULT+4,
+ERROR_DNS_V6_PORT=ERROR_DEFAULT+5,
+ERROR_BLACKLIST_LOAD=ERROR_DEFAULT+6,
+ERROR_AUTOTTL=ERROR_DEFAULT+7,
+ERROR_ATOUSI=ERROR_DEFAULT+8,
+ERROR_AUTOB=ERROR_DEFAULT+9
+};
 static int running_from_service = 0;
 static int exiting = 0;
 static HANDLE filters[MAX_FILTERS];
