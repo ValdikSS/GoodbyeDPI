@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <signal.h>
 #include <unistd.h>
@@ -941,7 +942,7 @@ int main(int argc, char *argv[]) {
                 break;
             case '?': // --debug-exit
                 debug_exit = true;
-                break
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -1122,7 +1123,7 @@ int main(int argc, char *argv[]) {
             die();
     }
     if (debug_exit) {
-        exit(EXIT_SUCCESS);  
+        exit(EXIT_SUCCESS);
     }
     printf("Filter activated, GoodbyeDPI is now running!\n");
     signal(SIGINT, sigint_handler);
