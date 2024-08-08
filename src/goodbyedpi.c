@@ -187,6 +187,7 @@ static struct option long_options[] = {
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
+    {"debug-exit",  optional_argument, 0,  '?' },
     {0,             0,                 0,   0  }
 };
 
@@ -577,6 +578,7 @@ int main(int argc, char *argv[]) {
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
         ipv6_tcp, ipv6_tcp_data, ipv6_udp_data
     } packet_type;
+    bool debug_exit = false;
     int i, should_reinject, should_recalc_checksum = 0;
     int sni_ok = 0;
     int opt;
@@ -937,6 +939,9 @@ int main(int argc, char *argv[]) {
                 else
                     max_payload_size = 1200;
                 break;
+            case '?': // --debug-exit
+                debug_exit = true;
+                break
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -1116,7 +1121,9 @@ int main(int argc, char *argv[]) {
         if (filters[i] == NULL)
             die();
     }
-
+    if (debug_exit) {
+        exit(EXIT_SUCCESS);  
+    }
     printf("Filter activated, GoodbyeDPI is now running!\n");
     signal(SIGINT, sigint_handler);
 
