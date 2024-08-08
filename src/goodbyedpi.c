@@ -940,7 +940,7 @@ int main(int argc, char *argv[]) {
                     max_payload_size = 1200;
                 break;
             case '?': // --debug-exit
-                debug_exit=true;
+                debug_exit = true;
                 break
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
