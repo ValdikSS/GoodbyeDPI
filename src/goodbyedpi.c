@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <signal.h>
 #include <unistd.h>
@@ -169,26 +170,27 @@ static const char *http_methods[] = {
 };
 
 static struct option long_options[] = {
-    {"port",        required_argument, 0,  'z' },
-    {"dns-addr",    required_argument, 0,  'd' },
-    {"dns-port",    required_argument, 0,  'g' },
-    {"dnsv6-addr",  required_argument, 0,  '!' },
-    {"dnsv6-port",  required_argument, 0,  '@' },
-    {"dns-verb",    no_argument,       0,  'v' },
-    {"blacklist",   required_argument, 0,  'b' },
-    {"allow-no-sni",no_argument,       0,  ']' },
-    {"frag-by-sni", no_argument,       0,  '>' },
-    {"ip-id",       required_argument, 0,  'i' },
-    {"set-ttl",     required_argument, 0,  '$' },
-    {"min-ttl",     required_argument, 0,  '[' },
-    {"auto-ttl",    optional_argument, 0,  '+' },
-    {"wrong-chksum",no_argument,       0,  '%' },
-    {"wrong-seq",   no_argument,       0,  ')' },
-    {"native-frag", no_argument,       0,  '*' },
-    {"reverse-frag",no_argument,       0,  '(' },
-    {"max-payload", optional_argument, 0,  '|' },
-    {"no-console",  optional_argument, 0,  'c' },
-    {0,             0,                 0,   0  }
+    {"port",            required_argument, 0,  'z' },
+    {"dns-addr",        required_argument, 0,  'd' },
+    {"dns-port",        required_argument, 0,  'g' },
+    {"dnsv6-addr",      required_argument, 0,  '!' },
+    {"dnsv6-port",      required_argument, 0,  '@' },
+    {"dns-verb",        no_argument,       0,  'v' },
+    {"blacklist",       required_argument, 0,  'b' },
+    {"allow-no-sni",    no_argument,       0,  ']' },
+    {"frag-by-sni",     no_argument,       0,  '>' },
+    {"ip-id",           required_argument, 0,  'i' },
+    {"set-ttl",         required_argument, 0,  '$' },
+    {"min-ttl",         required_argument, 0,  '[' },
+    {"auto-ttl",        optional_argument, 0,  '+' },
+    {"wrong-chksum",    no_argument,       0,  '%' },
+    {"wrong-seq",       no_argument,       0,  ')' },
+    {"native-frag",     no_argument,       0,  '*' },
+    {"reverse-frag",    no_argument,       0,  '(' },
+    {"max-payload",     optional_argument, 0,  '|' },
+    {"debug-no-console",optional_argument, 0,  'c' },
+    {"debug-exit",      optional_argument, 0,  '?' },
+    {0,                 0,                 0,   0  }
 };
 
 static char *filter_string = NULL;
@@ -578,6 +580,7 @@ int main(int argc, char *argv[]) {
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
         ipv6_tcp, ipv6_tcp_data, ipv6_udp_data
     } packet_type;
+    bool debug_exit = false;
     int i, should_reinject, should_recalc_checksum = 0;
     int sni_ok = 0;
     int opt;
@@ -938,9 +941,11 @@ int main(int argc, char *argv[]) {
                 else
                     max_payload_size = 1200;
                 break;
-            case 'c': // --no-console
-                if (GetConsoleWindow() != NULL)
-                    FreeConsole();
+            case 'c': // --debug-no-console
+                FreeConsole();
+                break;
+            case '?': // --debug-exit
+                debug_exit = true;
                 break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
@@ -992,7 +997,6 @@ int main(int argc, char *argv[]) {
                 "                          (like file transfers) in already established sessions.\n"
                 "                          May skip some huge HTTP requests from being processed.\n"
                 "                          Default (if set): --max-payload 1200.\n"
-                " --no-console             Hides console window :)\n"
                 "\n");
                 puts("LEGACY modesets:\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)\n"
@@ -1122,7 +1126,9 @@ int main(int argc, char *argv[]) {
         if (filters[i] == NULL)
             die();
     }
-
+    if (debug_exit) {
+        exit(EXIT_SUCCESS);
+    }
     printf("Filter activated, GoodbyeDPI is now running!\n");
     signal(SIGINT, sigint_handler);
 
