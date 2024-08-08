@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
         ipv6_tcp, ipv6_tcp_data, ipv6_udp_data
     } packet_type;
-    bool debug_exit=false;
+    bool debug_exit = false;
     int i, should_reinject, should_recalc_checksum = 0;
     int sni_ok = 0;
     int opt;
@@ -991,8 +991,6 @@ int main(int argc, char *argv[]) {
                 "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
                 "                          (like file transfers) in already established sessions.\n"
                 "                          May skip some huge HTTP requests from being processed.\n"
-                "                          Default (if set): --max-payload 1200.\n"
-                " --debug-exit             Force exit before windivert input/output loop.\n"
                 "                          Default (if set): --max-payload 1200.\n"
                 "\n");
                 puts("LEGACY modesets:\n"
