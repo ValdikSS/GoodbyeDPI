@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'src/**'
+  pull_request:
+    paths:
+      - 'src/**'
   workflow_dispatch:
 
 env:
