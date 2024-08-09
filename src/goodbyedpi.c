@@ -170,27 +170,27 @@ static const char *http_methods[] = {
 };
 
 static struct option long_options[] = {
-    {"port",            required_argument, 0,  'z' },
-    {"dns-addr",        required_argument, 0,  'd' },
-    {"dns-port",        required_argument, 0,  'g' },
-    {"dnsv6-addr",      required_argument, 0,  '!' },
-    {"dnsv6-port",      required_argument, 0,  '@' },
-    {"dns-verb",        no_argument,       0,  'v' },
-    {"blacklist",       required_argument, 0,  'b' },
-    {"allow-no-sni",    no_argument,       0,  ']' },
-    {"frag-by-sni",     no_argument,       0,  '>' },
-    {"ip-id",           required_argument, 0,  'i' },
-    {"set-ttl",         required_argument, 0,  '$' },
-    {"min-ttl",         required_argument, 0,  '[' },
-    {"auto-ttl",        optional_argument, 0,  '+' },
-    {"wrong-chksum",    no_argument,       0,  '%' },
-    {"wrong-seq",       no_argument,       0,  ')' },
-    {"native-frag",     no_argument,       0,  '*' },
-    {"reverse-frag",    no_argument,       0,  '(' },
-    {"max-payload",     optional_argument, 0,  '|' },
-    {"debug-no-console",optional_argument, 0,  'c' },
-    {"debug-exit",      optional_argument, 0,  '?' },
-    {0,                 0,                 0,   0  }
+    {"port",        required_argument, 0,  'z' },
+    {"dns-addr",    required_argument, 0,  'd' },
+    {"dns-port",    required_argument, 0,  'g' },
+    {"dnsv6-addr",  required_argument, 0,  '!' },
+    {"dnsv6-port",  required_argument, 0,  '@' },
+    {"dns-verb",    no_argument,       0,  'v' },
+    {"blacklist",   required_argument, 0,  'b' },
+    {"allow-no-sni",no_argument,       0,  ']' },
+    {"frag-by-sni", no_argument,       0,  '>' },
+    {"ip-id",       required_argument, 0,  'i' },
+    {"set-ttl",     required_argument, 0,  '$' },
+    {"min-ttl",     required_argument, 0,  '[' },
+    {"auto-ttl",    optional_argument, 0,  '+' },
+    {"wrong-chksum",no_argument,       0,  '%' },
+    {"wrong-seq",   no_argument,       0,  ')' },
+    {"native-frag", no_argument,       0,  '*' },
+    {"reverse-frag",no_argument,       0,  '(' },
+    {"max-payload", optional_argument, 0,  '|' },
+    {"debug-no-console", optional_argument, 0, 'c'},
+    {"debug-exit",  optional_argument, 0,  '?' },
+    {0,             0,                 0,   0  }
 };
 
 static char *filter_string = NULL;
