@@ -27,7 +27,7 @@ CFLAGS = -std=c99 -pie -fPIE -pipe -I$(WINDIVERTHEADERS) -L$(WINDIVERTLIBS) \
          -Wfloat-equal -Wcast-align -Wsign-conversion \
          #-fstack-protector-strong
 LDFLAGS = -fstack-protector -Wl,-O1,-pie,--dynamicbase,--nxcompat,--sort-common,--as-needed \
--Wl,--image-base,0x140000000 -Wl,--disable-auto-image-base
+-Wl,--disable-auto-image-base
 
 ifdef BIT64
 	LDFLAGS += -Wl,--high-entropy-va -Wl,--pic-executable,-e,mainCRTStartup
