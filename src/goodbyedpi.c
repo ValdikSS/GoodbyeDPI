@@ -24,7 +24,7 @@
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
 
-#define GOODBYEDPI_VERSION "v0.2.3"
+#define GOODBYEDPI_VERSION "v0.2.4"
 
 #define die() do { sleep(20); exit(EXIT_FAILURE); } while (0)
 
@@ -188,6 +188,7 @@ static struct option long_options[] = {
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
+    {"debug-no-console", optional_argument, 0, 'c'},
     {"debug-exit",  optional_argument, 0,  '?' },
     {0,             0,                 0,   0  }
 };
@@ -939,6 +940,9 @@ int main(int argc, char *argv[]) {
                     max_payload_size = atousi(optarg, "Max payload size parameter error!");
                 else
                     max_payload_size = 1200;
+                break;
+            case 'c': // --debug-no-console
+                FreeConsole();
                 break;
             case '?': // --debug-exit
                 debug_exit = true;
