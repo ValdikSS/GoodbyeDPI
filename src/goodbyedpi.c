@@ -574,8 +574,7 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
 }
 
 int main(int argc, char *argv[]) {
-    printf("Debug mode is %s",getenv("DEBUG_GDPI"));
-    debug("Debug mode enabled");
+    debug("Debug mode enabled\n\n");
     static enum packet_type_e {
         unknown,
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
