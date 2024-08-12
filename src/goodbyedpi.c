@@ -574,6 +574,7 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
 }
 
 int main(int argc, char *argv[]) {
+    debug("Debug mode enabled");
     static enum packet_type_e {
         unknown,
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
