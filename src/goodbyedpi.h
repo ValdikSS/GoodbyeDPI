@@ -6,6 +6,6 @@
 // #else
 // #define debug(...) printf(__VA_ARGS__)
 // #endif
-#define debug(...) if (getenv("DEBUG_GDPI")!=NULL) printf(__VA_ARGS__)
+#define debug(...) if (getenv("DEBUG_GDPI") != NULL) printf(__VA_ARGS__)
 int main(int argc, char *argv[]);
 void deinit_all();
