@@ -156,6 +156,7 @@ Modify them according to your own needs.
 - **[SpoofDPI](https://github.com/xvzc/SpoofDPI)** by @xvzc (for macOS and Linux)
 - **[GhosTCP](https://github.com/macronut/ghostcp)** by @macronut (for Windows)
 - **[ByeDPI](https://github.com/hufrea/byedpi)** for Linux/Windows + **[ByeDPIAndroid](https://github.com/dovecoteescapee/ByeDPIAndroid/)** for Android (no root)
+- **[youtubeUnblock](https://github.com/Waujito/youtubeUnblock/)** by @Waujito (for OpenWRT/Entware routers and Linux)
 
 # Kudos
 
