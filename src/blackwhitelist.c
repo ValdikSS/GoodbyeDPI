@@ -70,8 +70,8 @@ int blackwhitelist_load_list(const char *filename) {
                 line);
             continue;
         }
-        if (strlen(line) < 3) {
-            printf("WARNING: host %s is less than 3 bytes, skipping\n", line);
+        if (strlen(line) < 2) {
+            printf("WARNING: host %s is less than 2 characters, skipping\n", line);
             continue;
         }
         if (add_hostname(line))
@@ -99,8 +99,7 @@ int blackwhitelist_check_hostname(const char *host_addr, size_t host_len) {
 
     tokenized_host = strchr(current_host, '.');
     while (tokenized_host != NULL && tokenized_host < (current_host + HOST_MAXLEN)) {
-        /* Search hostname only if there is next token */
-        if (strchr(tokenized_host + 1, '.') && check_get_hostname(tokenized_host + 1))
+        if (check_get_hostname(tokenized_host + 1))
             return TRUE;
         tokenized_host = strchr(tokenized_host + 1, '.');
     }
