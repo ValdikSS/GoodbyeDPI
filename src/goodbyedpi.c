@@ -188,7 +188,7 @@ static struct option long_options[] = {
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
-    {"debug-exit",  optional_argument, 0,  '?' },
+    {"debug-exit",  optional_argument, 0,  'x' },
     {0,             0,                 0,   0  }
 };
 
@@ -940,7 +940,7 @@ int main(int argc, char *argv[]) {
                 else
                     max_payload_size = 1200;
                 break;
-            case '?': // --debug-exit
+            case 'x': // --debug-exit
                 debug_exit = true;
                 break;
             default:
@@ -1123,6 +1123,7 @@ int main(int argc, char *argv[]) {
             die();
     }
     if (debug_exit) {
+        printf("Debug Exit\n");
         exit(EXIT_SUCCESS);
     }
     printf("Filter activated, GoodbyeDPI is now running!\n");
