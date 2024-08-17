@@ -84,7 +84,7 @@ WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pA
         "and udp.Payload[0] >= 0xC0 and udp.Payload32[1b] == 0x01"
 #define FILTER_PASSIVE_STRING_TEMPLATE "inbound and ip and tcp and " \
         "!impostor and !loopback and " \
-        "((ip.Id <= 0xF and ip.Id >= 0x0) " IPID_TEMPLATE ") and " \
+        "(true " IPID_TEMPLATE ") and " \
         "(tcp.SrcPort == 443 or tcp.SrcPort == 80) and tcp.Rst and " \
         DIVERT_NO_LOCALNETSv4_SRC
 
