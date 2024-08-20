@@ -36,6 +36,10 @@ static int add_hostname(const char *host) {
         return FALSE;
 
     blackwhitelist_record_t *tmp_record = malloc(sizeof(blackwhitelist_record_t));
+
+    if (!tmp_record)
+        return FALSE;
+
     char *host_c = NULL;
 
     if (!check_get_hostname(host)) {
@@ -55,6 +59,10 @@ static int add_hostname(const char *host) {
 
 int blackwhitelist_load_list(const char *filename) {
     char *line = malloc(HOST_MAXLEN + 1);
+
+    if (!line)
+        return FALSE; 
+           
     size_t linelen = HOST_MAXLEN + 1;
     int cnt = 0;
     ssize_t read;
