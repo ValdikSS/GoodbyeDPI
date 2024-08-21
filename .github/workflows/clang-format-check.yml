@@ -1,5 +1,11 @@
 name: Clang Format Checker
-on: [push]
+on:
+  push:
+    paths:
+      - 'src/**'
+  pull_request:
+    paths:
+      - 'src/**'
 env:
  BRANCH_NAME: master
 jobs:
