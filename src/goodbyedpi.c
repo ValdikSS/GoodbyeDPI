@@ -207,7 +207,7 @@ static void add_filter_str(int proto, int port) {
     char *new_filter = malloc(new_filter_size);
 
     if (!new_filter)
-        return FALSE;
+        return;
 
     strcpy(new_filter, current_filter);
     if (proto == IPPROTO_UDP)
@@ -225,7 +225,7 @@ static void add_ip_id_str(int id) {
     char *addfilter = malloc(strlen(ipid) + 16);
 
     if (!addfilter)
-        return FALSE;
+        return ;
         
     sprintf(addfilter, ipid, id);
 
@@ -248,7 +248,7 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
     char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
     if (!addfilter)
-        return FALSE;
+        return ;
         
     sprintf(addfilter, maxpayloadsize_str, maxpayload);
 
