@@ -1,0 +1,11 @@
+name: Clang Format Checker
+on: [push]
+env:
+ BRANCH_NAME: master
+jobs:
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wolletd/clang-format-checker@v1
+        with:
+          target-ref: ${{ env. BRANCH_NAME }}     # required, merge target
