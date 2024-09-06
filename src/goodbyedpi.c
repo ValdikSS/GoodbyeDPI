@@ -1,7 +1,7 @@
 /*
  * GoodbyeDPI — Passive DPI blocker and Active DPI circumvention utility.
  */
-
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
