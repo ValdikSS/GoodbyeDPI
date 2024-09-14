@@ -1064,7 +1064,8 @@ int main(int argc, char *argv[]) {
            "Fake requests, TTL: %s (fixed: %hu, auto: %hu-%hu-%hu, min distance: %hu)\n"  /* 17 */
            "Fake requests, wrong checksum: %d\n"    /* 18 */
            "Fake requests, wrong SEQ/ACK: %d\n"     /* 19 */
-           "Max payload size: %hu\n",               /* 20 */
+           "Fake requests, custom payloads: %d\n"   /* 20 */
+           "Max payload size: %hu\n",               /* 21 */
            do_passivedpi, do_block_quic,                          /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
@@ -1086,7 +1087,8 @@ int main(int argc, char *argv[]) {
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
            do_wrong_chksum, /* 18 */
            do_wrong_seq,    /* 19 */
-           max_payload_size /* 20 */
+           fakes_count,    /* 20 */
+           max_payload_size /* 21 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {
