@@ -1,4 +1,5 @@
 extern int fakes_count;
+extern int fakes_resend;
 int send_fake_http_request(const HANDLE w_filter,
                                   const PWINDIVERT_ADDRESS addr,
                                   const char *pkt,

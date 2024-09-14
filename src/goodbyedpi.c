@@ -190,6 +190,7 @@ static struct option long_options[] = {
     {"max-payload", optional_argument, 0,  '|' },
     {"fake-from-hex", required_argument, 0,  'u' },
     {"fake-gen",    required_argument, 0,  'j' },
+    {"fake-resend", required_argument, 0,  't' },
     {"debug-exit",  optional_argument, 0,  'x' },
     {0,             0,                 0,   0  }
 };
@@ -952,6 +953,15 @@ int main(int argc, char *argv[]) {
                     puts("WARNING: fake generator has failed!");
                 }
                 break;
+            case 't': // --fake-resend
+                fakes_resend = atoub(optarg, "Fake resend parameter error!");
+                if (fakes_resend == 1)
+                    puts("WARNING: fake-resend is 1, no resending is in place!");
+                else if (!fakes_resend)
+                    puts("WARNING: fake-resend is 0, fake packet mode is disabled!");
+                else if (fakes_resend > 100)
+                    puts("WARNING: fake-resend value is a little too high, don't you think?");
+                break;
             case 'x': // --debug-exit
                 debug_exit = true;
                 break;
@@ -1005,6 +1015,8 @@ int main(int argc, char *argv[]) {
                 "                          would be sent on every request in the command line argument order.\n"
                 " --fake-gen <value>       Generate random-filled fake packets for Fake Request Mode, value of them\n"
                 "                          (up to 30).\n"
+                " --fake-resend <value>    Send each fake packet value number of times.\n"
+                "                          Default: 1 (send each packet once).\n"
                 " --max-payload [value]    packets with TCP payload data more than [value] won't be processed.\n"
                 "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
                 "                          (like file transfers) in already established sessions.\n"
@@ -1065,7 +1077,8 @@ int main(int argc, char *argv[]) {
            "Fake requests, wrong checksum: %d\n"    /* 18 */
            "Fake requests, wrong SEQ/ACK: %d\n"     /* 19 */
            "Fake requests, custom payloads: %d\n"   /* 20 */
-           "Max payload size: %hu\n",               /* 21 */
+           "Fake requests, resend: %d\n"            /* 21 */
+           "Max payload size: %hu\n",               /* 22 */
            do_passivedpi, do_block_quic,                          /* 1 */
            (do_fragment_http ? http_fragment_size : 0),           /* 2 */
            (do_fragment_http_persistent ? http_fragment_size : 0),/* 3 */
@@ -1087,8 +1100,9 @@ int main(int argc, char *argv[]) {
                do_auto_ttl ? auto_ttl_max : 0, ttl_min_nhops,
            do_wrong_chksum, /* 18 */
            do_wrong_seq,    /* 19 */
-           fakes_count,    /* 20 */
-           max_payload_size /* 21 */
+           fakes_count,     /* 20 */
+           fakes_resend,    /* 21 */
+           max_payload_size /* 22 */
           );
 
     if (do_fragment_http && http_fragment_size > 2 && !do_native_frag) {

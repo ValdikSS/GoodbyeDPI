@@ -69,6 +69,8 @@ Usage: goodbyedpi.exe [OPTION...]
                           would be sent on every request in the command line argument order.
  --fake-gen <value>       Generate random-filled fake packets for Fake Request Mode, value of them
                           (up to 30).
+ --fake-resend <value>    Send each fake packet value number of times.
+                          Default: 1 (send each packet once).
  --max-payload [value]    packets with TCP payload data more than [value] won't be processed.
                           Use this option to reduce CPU usage by skipping huge amount of data
                           (like file transfers) in already established sessions.

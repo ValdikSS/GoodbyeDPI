@@ -16,6 +16,7 @@ struct fake_t {
 
 static struct fake_t *fakes[30] = {0};
 int fakes_count = 0;
+int fakes_resend = 1;
 
 static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
                                                  "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
@@ -198,7 +199,8 @@ int send_fake_http_request(const HANDLE w_filter,
                                  ) {
     int ret = 0;
     for (int i=0; i<fakes_count || i == 0; i++) {
-        if (send_fake_request(w_filter, addr, pkt, packetLen,
+        for (int j=0; j<fakes_resend; j++)
+            if (send_fake_request(w_filter, addr, pkt, packetLen,
                             is_ipv6, FALSE,
                             set_ttl, set_checksum, set_seq,
                             fakes[i]))
@@ -220,7 +222,8 @@ int send_fake_https_request(const HANDLE w_filter,
                                  ) {
     int ret = 0;
     for (int i=0; i<fakes_count || i == 0; i++) {
-        if (send_fake_request(w_filter, addr, pkt, packetLen,
+        for (int j=0; j<fakes_resend; j++)
+            if (send_fake_request(w_filter, addr, pkt, packetLen,
                           is_ipv6, TRUE,
                           set_ttl, set_checksum, set_seq,
                           fakes[i]))
