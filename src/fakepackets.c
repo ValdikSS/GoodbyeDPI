@@ -1,4 +1,5 @@
 #include <stdio.h>
+#define _CRT_RAND_S
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ctype.h>
@@ -283,4 +284,27 @@ int fake_load_from_hex(const char *data) {
     }
 
     return fake_add(finaldata, len / 2);
+}
+
+int fake_load_random(unsigned int count, unsigned int maxsize) {
+    if (count < 1 || count > sizeof(fakes) / sizeof(*fakes))
+        return 1;
+
+    unsigned int random = 0;
+
+    for (unsigned int i=0; i<count; i++) {
+        unsigned int len = 0;
+        if (rand_s(&len))
+            return 1;
+        len = 8 + (len % maxsize);
+
+        unsigned char *data = calloc(len, 1);
+        for (unsigned int j=0; j<len; j++) {
+            rand_s(&random);
+            data[j] = random % 0xFF;
+        }
+        if (fake_add(data, len))
+            return 2;
+    }
+    return 0;
 }

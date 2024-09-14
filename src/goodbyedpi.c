@@ -189,6 +189,7 @@ static struct option long_options[] = {
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
     {"fake-from-hex", required_argument, 0,  'u' },
+    {"fake-gen",    required_argument, 0,  'j' },
     {"debug-exit",  optional_argument, 0,  'x' },
     {0,             0,                 0,   0  }
 };
@@ -946,6 +947,11 @@ int main(int argc, char *argv[]) {
                     printf("WARNING: bad fake HEX value %s\n", optarg);
                 }
                 break;
+            case 'j': // --fake-gen
+                if (fake_load_random(atoub(optarg, "Fake generator parameter error!"))) {
+                    puts("WARNING: fake generator has failed!");
+                }
+                break;
             case 'x': // --debug-exit
                 debug_exit = true;
                 break;
@@ -997,6 +1003,8 @@ int main(int argc, char *argv[]) {
                 " --fake-from-hex <value>  Load fake packets for Fake Request Mode from HEX values (like 1234abcDEF).\n"
                 "                          This option can be supplied multiple times, in this case each fake packet\n"
                 "                          would be sent on every request in the command line argument order.\n"
+                " --fake-gen <value>       Generate random-filled fake packets for Fake Request Mode, value of them\n"
+                "                          (up to 30).\n"
                 " --max-payload [value]    packets with TCP payload data more than [value] won't be processed.\n"
                 "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
                 "                          (like file transfers) in already established sessions.\n"
