@@ -1,11 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <in6addr.h>
 #include <ws2tcpip.h>
 #include "windivert.h"
 #include "goodbyedpi.h"
+
+struct fake_t {
+    const unsigned char* data;
+    size_t size;
+};
+
+static struct fake_t *fakes[30] = {0};
+int fakes_count = 0;
 
 static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
                                                  "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
@@ -54,7 +63,8 @@ static int send_fake_data(const HANDLE w_filter,
                           const BOOL is_https,
                           const BYTE set_ttl,
                           const BYTE set_checksum,
-                          const BYTE set_seq
+                          const BYTE set_seq,
+                          const struct fake_t *fake_data
                          ) {
     char packet_fake[MAX_PACKET_SIZE];
     WINDIVERT_ADDRESS addr_new;
@@ -66,6 +76,10 @@ static int send_fake_data(const HANDLE w_filter,
     PWINDIVERT_TCPHDR ppTcpHdr;
     unsigned const char *fake_request_data = is_https ? fake_https_request : fake_http_request;
     UINT fake_request_size = is_https ? sizeof(fake_https_request) : sizeof(fake_http_request) - 1;
+    if (fake_data) {
+        fake_request_data = fake_data->data;
+        fake_request_size = fake_data->size;
+    }
 
     memcpy(&addr_new, addr, sizeof(WINDIVERT_ADDRESS));
     memcpy(packet_fake, pkt, packetLen);
@@ -148,22 +162,26 @@ static int send_fake_request(const HANDLE w_filter,
                                   const BOOL is_https,
                                   const BYTE set_ttl,
                                   const BYTE set_checksum,
-                                  const BYTE set_seq
+                                  const BYTE set_seq,
+                                  const struct fake_t *fake_data
                                  ) {
     if (set_ttl) {
         send_fake_data(w_filter, addr, pkt, packetLen,
                           is_ipv6, is_https,
-                          set_ttl, FALSE, FALSE);
+                          set_ttl, FALSE, FALSE,
+                          fake_data);
     }
     if (set_checksum) {
         send_fake_data(w_filter, addr, pkt, packetLen,
                           is_ipv6, is_https,
-                          FALSE, set_checksum, FALSE);
+                          FALSE, set_checksum, FALSE,
+                          fake_data);
     }
     if (set_seq) {
         send_fake_data(w_filter, addr, pkt, packetLen,
                           is_ipv6, is_https,
-                          FALSE, FALSE, set_seq);
+                          FALSE, FALSE, set_seq,
+                          fake_data);
     }
     return 0;
 }
@@ -177,9 +195,17 @@ int send_fake_http_request(const HANDLE w_filter,
                                   const BYTE set_checksum,
                                   const BYTE set_seq
                                  ) {
-    return send_fake_request(w_filter, addr, pkt, packetLen,
-                          is_ipv6, FALSE,
-                          set_ttl, set_checksum, set_seq);
+    int ret = 0;
+    for (int i=0; i<fakes_count || i == 0; i++) {
+        if (send_fake_request(w_filter, addr, pkt, packetLen,
+                            is_ipv6, FALSE,
+                            set_ttl, set_checksum, set_seq,
+                            fakes[i]))
+            {
+                ret++;
+            }
+    }
+    return ret;
 }
 
 int send_fake_https_request(const HANDLE w_filter,
@@ -191,7 +217,70 @@ int send_fake_https_request(const HANDLE w_filter,
                                    const BYTE set_checksum,
                                    const BYTE set_seq
                                  ) {
-    return send_fake_request(w_filter, addr, pkt, packetLen,
+    int ret = 0;
+    for (int i=0; i<fakes_count || i == 0; i++) {
+        if (send_fake_request(w_filter, addr, pkt, packetLen,
                           is_ipv6, TRUE,
-                          set_ttl, set_checksum, set_seq);
+                          set_ttl, set_checksum, set_seq,
+                          fakes[i]))
+            {
+                ret++;
+            }
+    }
+    return ret;
+}
+
+static int fake_add(const unsigned char *data, size_t size) {
+    struct fake_t *fake = malloc(sizeof(struct fake_t));
+    fake->size = size;
+    fake->data = data;
+
+    for (size_t k = 0; k <= sizeof(fakes) / sizeof(*fakes); k++) {
+        if (!fakes[k]) {
+            fakes[k] = fake;
+            fakes_count++;
+            return 0;
+        }
+    }
+    return 3;
+}
+
+int fake_load_from_hex(const char *data) {
+    size_t len = strlen(data);
+    if (len < 2 || len % 2 || len > 1420)
+        return 1;
+
+    unsigned char *finaldata = calloc((len + 2) / 2, 1);
+
+    for (size_t i = 0; i<len - 1; i+=2) {
+        char num1 = data[i];
+        char num2 = data[i+1];
+        debug("Current num1: %X, num2: %X\n", num1, num2);
+        unsigned char finalchar = 0;
+        char curchar = num1;
+
+        for (int j=0; j<=1; j++) {
+            if (curchar >= '0' && curchar <= '9')
+                curchar -= '0';
+            else if (curchar >= 'a' && curchar <= 'f')
+                curchar -= 'a' - 0xA;
+            else if (curchar >= 'A' && curchar <= 'F')
+                curchar -= 'A' - 0xA;
+            else
+                return 2; // incorrect character, not a hex data
+
+            if (!j) {
+                num1 = curchar;
+                curchar = num2;
+                continue;
+            }
+            num2 = curchar;
+        }
+        debug("Processed num1: %X, num2: %X\n", num1, num2);
+        finalchar = (num1 << 4) | num2;
+        debug("Final char: %X\n", finalchar);
+        finaldata[i/2] = finalchar;
+    }
+
+    return fake_add(finaldata, len / 2);
 }

@@ -188,6 +188,7 @@ static struct option long_options[] = {
     {"native-frag", no_argument,       0,  '*' },
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
+    {"fake-from-hex", required_argument, 0,  'u' },
     {"debug-exit",  optional_argument, 0,  'x' },
     {0,             0,                 0,   0  }
 };
@@ -940,6 +941,11 @@ int main(int argc, char *argv[]) {
                 else
                     max_payload_size = 1200;
                 break;
+            case 'u': // --fake-from-hex
+                if (fake_load_from_hex(optarg)) {
+                    printf("WARNING: bad fake HEX value %s\n", optarg);
+                }
+                break;
             case 'x': // --debug-exit
                 debug_exit = true;
                 break;
@@ -988,6 +994,9 @@ int main(int argc, char *argv[]) {
                 " --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the\n"
                 "                          reversed order. Works with the websites which could not handle segmented\n"
                 "                          HTTPS TLS ClientHello (because they receive the TCP flow \"combined\").\n"
+                " --fake-from-hex <value>  Load fake packets for Fake Request Mode from HEX values (like 1234abcDEF).\n"
+                "                          This option can be supplied multiple times, in this case each fake packet\n"
+                "                          would be sent on every request in the command line argument order.\n"
                 " --max-payload [value]    packets with TCP payload data more than [value] won't be processed.\n"
                 "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
                 "                          (like file transfers) in already established sessions.\n"

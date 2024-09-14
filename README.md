@@ -64,6 +64,9 @@ Usage: goodbyedpi.exe [OPTION...]
  --reverse-frag           fragment (split) the packets just as --native-frag, but send them in the
                           reversed order. Works with the websites which could not handle segmented
                           HTTPS TLS ClientHello (because they receive the TCP flow "combined").
+ --fake-from-hex <value>  Load fake packets for Fake Request Mode from HEX values (like 1234abcDEF).
+                          This option can be supplied multiple times, in this case each fake packet
+                          would be sent on every request in the command line argument order.
  --max-payload [value]    packets with TCP payload data more than [value] won't be processed.
                           Use this option to reduce CPU usage by skipping huge amount of data
                           (like file transfers) in already established sessions.
