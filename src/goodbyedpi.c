@@ -949,7 +949,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             case 'j': // --fake-gen
-                if (fake_load_random(atoub(optarg, "Fake generator parameter error!"))) {
+                if (fake_load_random(atoub(optarg, "Fake generator parameter error!"), 200)) {
                     puts("WARNING: fake generator has failed!");
                 }
                 break;
