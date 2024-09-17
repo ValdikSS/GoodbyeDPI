@@ -251,7 +251,7 @@ static int fake_add(const unsigned char *data, size_t size) {
 
 int fake_load_from_hex(const char *data) {
     size_t len = strlen(data);
-    if (len < 2 || len % 2 || len > 1420)
+    if (len < 2 || len % 2 || len > (1420 * 2))
         return 1;
 
     unsigned char *finaldata = calloc((len + 2) / 2, 1);
