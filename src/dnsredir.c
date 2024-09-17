@@ -142,6 +142,10 @@ static int add_udp_conntrack(const uint32_t srcip[4], const uint16_t srcport,
         return FALSE;
 
     udp_connrecord_t *tmp_connrecord = malloc(sizeof(udp_connrecord_t));
+
+    if (!tmp_connrecord)
+        return FALSE;
+        
     construct_key(srcip, srcport, tmp_connrecord->key, is_ipv6);
 
     if (!check_get_udp_conntrack_key(tmp_connrecord->key, NULL)) {

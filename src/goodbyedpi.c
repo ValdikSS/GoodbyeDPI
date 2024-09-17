@@ -209,6 +209,9 @@ static void add_filter_str(int proto, int port) {
             (proto == IPPROTO_UDP ? strlen(udp) : strlen(tcp)) + 16;
     char *new_filter = malloc(new_filter_size);
 
+    if (!new_filter)
+        return;
+
     strcpy(new_filter, current_filter);
     if (proto == IPPROTO_UDP)
         sprintf(new_filter + strlen(new_filter), udp, port, port);
@@ -224,6 +227,9 @@ static void add_ip_id_str(int id) {
     const char *ipid = " or ip.Id == %d";
     char *addfilter = malloc(strlen(ipid) + 16);
 
+    if (!addfilter)
+        return;
+        
     sprintf(addfilter, ipid, id);
 
     newstr = repl_str(filter_string, IPID_TEMPLATE, addfilter);
@@ -244,6 +250,9 @@ static void add_maxpayloadsize_str(unsigned short maxpayload) {
           "or (tcp.Payload[0] == 0x16 and tcp.Payload[1] == 0x03 and tcp.Payload[2] <= 0x03): true)";
     char *addfilter = malloc(strlen(maxpayloadsize_str) + 16);
 
+    if (!addfilter)
+        return;
+        
     sprintf(addfilter, maxpayloadsize_str, maxpayload);
 
     newstr = repl_str(filter_string, MAXPAYLOADSIZE_TEMPLATE, addfilter);

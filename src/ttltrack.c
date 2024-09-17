@@ -146,6 +146,10 @@ static int add_tcp_conntrack(const uint32_t srcip[4], const uint32_t dstip[4],
         return FALSE;
 
     tcp_connrecord_t *tmp_connrecord = malloc(sizeof(tcp_connrecord_t));
+
+    if (!tmp_connrecord)
+        return FALSE;
+        
     construct_key(srcip, dstip, srcport, dstport, tmp_connrecord->key, is_ipv6);
 
     if (!check_get_tcp_conntrack_key(tmp_connrecord->key, NULL)) {
