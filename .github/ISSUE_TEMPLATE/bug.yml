@@ -1,4 +1,4 @@
-name: Bug Report / Сообщение об ошибке
+name: The program crashes, hangs, certain function does not work / Программа падает, зависает, отдельная функция не работает
 description: File a bug report / Сообщить об ошибке в программе
 
 body:
