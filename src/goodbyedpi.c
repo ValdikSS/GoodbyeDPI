@@ -192,6 +192,7 @@ static struct option long_options[] = {
     {"fake-gen",    required_argument, 0,  'j' },
     {"fake-resend", required_argument, 0,  't' },
     {"debug-exit",  optional_argument, 0,  'x' },
+    {"debug-log",  optional_argument, 0,  'l' },
     {0,             0,                 0,   0  }
 };
 
@@ -577,8 +578,6 @@ static void send_native_fragment(HANDLE w_filter, WINDIVERT_ADDRESS addr,
 }
 
 int main(int argc, char *argv[]) {
-    debugPrint = &printf;
-    debug("Testing debug output");
     static enum packet_type_e {
         unknown,
         ipv4_tcp, ipv4_tcp_data, ipv4_udp_data,
@@ -967,6 +966,10 @@ int main(int argc, char *argv[]) {
             case 'x': // --debug-exit
                 debug_exit = true;
                 break;
+            case 'l':
+                debugPrint = &printf;
+                debug("Testing debug output\n"); 
+                break;   
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
