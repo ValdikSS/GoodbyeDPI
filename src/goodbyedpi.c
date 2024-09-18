@@ -192,7 +192,7 @@ static struct option long_options[] = {
     {"fake-gen",    required_argument, 0,  'j' },
     {"fake-resend", required_argument, 0,  't' },
     {"debug-exit",  optional_argument, 0,  'x' },
-    {"debug-log",  optional_argument, 0,  'l' },
+    {"debug-log",  optional_argument,  0,  'l' },
     {0,             0,                 0,   0  }
 };
 
