@@ -5,24 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        ### USE THIS FORM ONLY FOR BUGS! The webside does not open? That's likely NOT a bug, do NOT report it here!
-        ### USE THIS FORM ONLY FOR BUGS! The webside does not open? That's likely NOT a bug, do NOT report it here!
-        ### USE THIS FORM ONLY FOR BUGS! The webside does not open? That's likely NOT a bug, do NOT report it here!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        ### ИСПОЛЬЗУЙТЕ ЭТУ ФОРМУ ТОЛЬКО ДЛЯ БАГОВ! Веб-сайт не открывается? Это, скорее всего, не баг, не сообщайте сюда, ВЫ БУДЕТЕ ЗАБАНЕНЫ!
-        
+        ### Carefully read all the text IN FULL. Take this seriously.
+        ### Use this form only for software bug reports! The webside does not open? That's likely NOT a bug, do NOT report it here! You have a question regarding the program? That's not a bug either!
+        #### If in doubt, [use NTC.party forum](https://ntc.party/c/community-software/goodbyedpi).
+        ### Внимательно прочитайте ВЕСЬ текст ниже. Отнеситесь к этому со всей ответственностью.
+        ### Используйте эту форму только для сообщений об ошибках в программе! Неоткрывающиеся сайты таковыми не являются, вопросы по программе к ошибкам не относятся.
+        #### Если у вас есть сомнения, [воспользуйтесь форумом NTC.party](https://ntc.party/c/community-software/goodbyedpi).
+
         GoodbyeDPI does not guarantee to work with your ISP for every blocked website or at all. If GoodbyeDPI can't unblock some or any websites, this is most likely not a software bug, and you should not report it here.
 
         Please only report software bugs, such as:
@@ -30,7 +19,8 @@ body:
           * incorrect network packet handling
           * antivirus incompatibility
           * DNS redirection problems
-          * other software 
+          * memory leaks
+          * other software issues
 
         Please make sure to check other opened and closed issues, it could be your bug has been reported already.
         For questions, or if in doubt, [use NTC.party forum](https://ntc.party/c/community-software/goodbyedpi).
@@ -43,6 +33,7 @@ body:
           * некорректная обработка сетевых пакетов
           * несовместимость с антивирусами
           * проблемы с перенаправлением DNS
+          * утечки памяти
           * другие ошибки в программе
 
         Также посмотрите другие открытые и закрытые баги. Возможно, ошибка уже обсуждалась или исправлена.

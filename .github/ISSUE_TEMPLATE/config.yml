@@ -1,5 +1,13 @@
 blank_issues_enabled: false
 contact_links:
+  - name: The program worked yesterday but not today / Программа работала вчера, но перестала работать сегодня
+    url: https://ntc.party/c/community-software/goodbyedpi/8
+    about: Visit support community forum, people will certainly help you! / Посетите форум поддержки, где сообщество вам поможет!
+
+  - name: Сertain website is still unreachable / Отдельный веб-сайт всё ещё недоступен
+    url: https://ntc.party/c/community-software/goodbyedpi/8
+    about: That could be solved with community support! / Проблема будет решена силами сообщества!
+
   - name: Questions about the program / Вопросы по програме
     url: https://ntc.party/c/community-software/goodbyedpi/8
     about: Please ask and answer questions on forum / Пожалуйста, задавайте вопросы только на форуме
