@@ -38,6 +38,15 @@ body:
 
         Также посмотрите другие открытые и закрытые баги. Возможно, ошибка уже обсуждалась или исправлена.
         Для вопросов, а также в случае сомнений в определении бага, обращайтесь [на форум NTC.party](https://ntc.party/c/community-software/goodbyedpi).
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: CAPTCHA
+      description: Confirm that you have read the text above / Подтвердите, что вы прочитали текст выше
+      options:
+        - label: I understand I could be banned from the repository if I misusing issue section not for posting bugs, but for question or 'broken website' report. / Я понимаю, что меня могут заблокировать в репозитории, если я буду использовать раздел issue не для сообщений об ошибках, а для вопросов или сообщении о «неработающем веб-сайте».
+    validations:
+      required: true
   - type: input
     id: os
     attributes:
