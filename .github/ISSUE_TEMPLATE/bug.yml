@@ -45,6 +45,7 @@ body:
       description: Confirm that you have read the text above / Подтвердите, что вы прочитали текст выше
       options:
         - label: I understand I could be banned from the repository if I misusing issue section not for posting bugs, but for question or 'broken website' report. / Я понимаю, что меня могут заблокировать в репозитории, если я буду использовать раздел issue не для сообщений об ошибках, а для вопросов или сообщении о «неработающем веб-сайте».
+          required: true
     validations:
       required: true
   - type: input
