@@ -189,6 +189,7 @@ static struct option long_options[] = {
     {"reverse-frag",no_argument,       0,  '(' },
     {"max-payload", optional_argument, 0,  '|' },
     {"fake-from-hex", required_argument, 0,  'u' },
+    {"fake-with-sni", required_argument, 0,  '}' },
     {"fake-gen",    required_argument, 0,  'j' },
     {"fake-resend", required_argument, 0,  't' },
     {"debug-exit",  optional_argument, 0,  'x' },
@@ -948,6 +949,11 @@ int main(int argc, char *argv[]) {
                     printf("WARNING: bad fake HEX value %s\n", optarg);
                 }
                 break;
+            case '}': // --fake-with-sni
+                if (fake_load_from_sni(optarg)) {
+                    printf("WARNING: bad domain name for SNI: %s\n", optarg);
+                }
+                break;
             case 'j': // --fake-gen
                 if (fake_load_random(atoub(optarg, "Fake generator parameter error!"), 200)) {
                     puts("WARNING: fake generator has failed!");
@@ -1013,6 +1019,10 @@ int main(int argc, char *argv[]) {
                 " --fake-from-hex <value>  Load fake packets for Fake Request Mode from HEX values (like 1234abcDEF).\n"
                 "                          This option can be supplied multiple times, in this case each fake packet\n"
                 "                          would be sent on every request in the command line argument order.\n"
+                " --fake-with-sni <value>  Generate fake packets for Fake Request Mode with given SNI domain name.\n"
+                "                          The packets mimic Mozilla Firefox 130 TLS ClientHello packet\n"
+                "                          (with random generated fake SessionID, key shares and ECH grease).\n"
+                "                          Can be supplied multiple times for multiple fake packets.\n"
                 " --fake-gen <value>       Generate random-filled fake packets for Fake Request Mode, value of them\n"
                 "                          (up to 30).\n"
                 " --fake-resend <value>    Send each fake packet value number of times.\n"
