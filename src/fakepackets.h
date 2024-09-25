@@ -19,4 +19,5 @@ int send_fake_https_request(const HANDLE w_filter,
                                    const BYTE set_seq
                                  );
 int fake_load_from_hex(const char *data);
+int fake_load_from_sni(const char *domain_name);
 int fake_load_random(unsigned int count, unsigned int maxsize);

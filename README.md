@@ -67,6 +67,10 @@ Usage: goodbyedpi.exe [OPTION...]
  --fake-from-hex <value>  Load fake packets for Fake Request Mode from HEX values (like 1234abcDEF).
                           This option can be supplied multiple times, in this case each fake packet
                           would be sent on every request in the command line argument order.
+ --fake-with-sni <value>  Generate fake packets for Fake Request Mode with given SNI domain name.
+                          The packets mimic Mozilla Firefox 130 TLS ClientHello packet
+                          (with random generated fake SessionID, key shares and ECH grease).
+                          Can be supplied multiple times for multiple fake packets.
  --fake-gen <value>       Generate random-filled fake packets for Fake Request Mode, value of them
                           (up to 30).
  --fake-resend <value>    Send each fake packet value number of times.
