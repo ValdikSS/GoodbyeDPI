@@ -1152,7 +1152,7 @@ int main(int argc, char *argv[]) {
         filter_num++;
     }
 
-    /* 
+    /*
      * IPv4 & IPv6 filter for inbound HTTP redirection packets and
      * active DPI circumvention
      */
@@ -1294,7 +1294,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
-                else if (addr.Outbound && 
+                else if (addr.Outbound &&
                         packet_dataLen > 16 &&
                         (do_http_allports ? 1 : (ppTcpHdr->DstPort == htons(80))) &&
                         find_http_method_end(packet_data,
@@ -1455,8 +1455,8 @@ int main(int argc, char *argv[]) {
                                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
                                         0, ppIpHdr->TTL))
                             ||
-                            (packet_v6 && tcp_handle_incoming((uint32_t*)&ppIpV6Hdr->SrcAddr,
-                                        (uint32_t*)&ppIpV6Hdr->DstAddr,
+                            (packet_v6 && tcp_handle_incoming(ppIpV6Hdr->SrcAddr,
+                                        ppIpV6Hdr->DstAddr,
                                         ppTcpHdr->SrcPort, ppTcpHdr->DstPort,
                                         1, ppIpV6Hdr->HopLimit))))
                         {

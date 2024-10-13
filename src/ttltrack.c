@@ -39,8 +39,8 @@ typedef struct tcp_connrecord {
 static time_t last_cleanup = 0;
 static tcp_connrecord_t *conntrack = NULL;
 
-inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_t srcip[4],
-                    const uint32_t dstip[4], const uint16_t srcport, const uint16_t dstport)
+inline static void fill_key_data(char *key, const uint8_t is_ipv6, const uint32_t* srcip,
+                    const uint32_t* dstip, const uint16_t srcport, const uint16_t dstport)
 {
     unsigned int offset = 0;
 
@@ -94,7 +94,7 @@ inline static void fill_data_from_key(uint8_t *is_ipv6, uint32_t srcip[4], uint3
     offset += sizeof(*dstport);
 }
 
-inline static void construct_key(const uint32_t srcip[4], const uint32_t dstip[4],
+inline static void construct_key(const uint32_t* srcip, const uint32_t* dstip,
                                  const uint16_t srcport, const uint16_t dstport,
                                  char *key, const uint8_t is_ipv6)
 {
@@ -137,7 +137,7 @@ static int check_get_tcp_conntrack_key(const char *key, tcp_connrecord_t **connr
     return FALSE;
 }
 
-static int add_tcp_conntrack(const uint32_t srcip[4], const uint32_t dstip[4],
+static int add_tcp_conntrack(const uint32_t* srcip, const uint32_t* dstip,
                              const uint16_t srcport, const uint16_t dstport,
                              const uint8_t is_ipv6, const uint8_t ttl
                             )
@@ -180,7 +180,7 @@ static void tcp_cleanup() {
     }
 }
 
-int tcp_handle_incoming(uint32_t srcip[4], uint32_t dstip[4],
+int tcp_handle_incoming(const uint32_t* srcip, const uint32_t* dstip,
                         uint16_t srcport, uint16_t dstport,
                         uint8_t is_ipv6, uint8_t ttl)
 {
@@ -193,7 +193,7 @@ int tcp_handle_incoming(uint32_t srcip[4], uint32_t dstip[4],
     return FALSE;
 }
 
-int tcp_handle_outgoing(uint32_t srcip[4], uint32_t dstip[4],
+int tcp_handle_outgoing(const uint32_t* srcip, const uint32_t* dstip,
                         uint16_t srcport, uint16_t dstport,
                         tcp_conntrack_info_t *conn_info,
                         uint8_t is_ipv6)
