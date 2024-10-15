@@ -133,7 +133,7 @@ The program loads WinDivert driver which uses Windows Filtering Platform to set 
 
 # How to build from source
 
-This project can be build using **GNU Make** and [**mingw**](https://mingw-w64.org). The only dependency is [WinDivert](https://github.com/basil00/Divert).
+This project can be build using **GNU Make** and [**MinGW-W64**](https://mingw-w64.org). The only dependency is [WinDivert](https://github.com/basil00/Divert).
 
 To build x86 exe run:
 
