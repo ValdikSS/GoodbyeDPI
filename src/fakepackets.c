@@ -17,6 +17,7 @@ struct fake_t {
 static struct fake_t *fakes[30] = {0};
 int fakes_count = 0;
 int fakes_resend = 1;
+unsigned int iphdr_id = 0;
 
 static const unsigned char fake_http_request[] = "GET / HTTP/1.1\r\nHost: www.w3.org\r\n"
                                                  "User-Agent: curl/7.65.3\r\nAccept: */*\r\n"
@@ -203,6 +204,13 @@ static int send_fake_data(const HANDLE w_filter,
 
         if (set_ttl)
             ppIpHdr->TTL = set_ttl;
+
+        // ppIpHdr->FragOff0 = ((ppIpHdr->FragOff0) & 0xFFBF) | //uncomment if DF flag must be zero
+        // (((FALSE) & 0x0001) << 6);  
+		
+        ppIpHdr->Id = htons(iphdr_id);
+        iphdr_id++;
+		
     }
     else {
         ppIpV6Hdr->Length = htons(
@@ -283,6 +291,7 @@ int send_fake_http_request(const HANDLE w_filter,
                                   const BYTE set_seq
                                  ) {
     int ret = 0;
+    rand_s(&iphdr_id);
     for (int i=0; i<fakes_count || i == 0; i++) {
         for (int j=0; j<fakes_resend; j++)
             if (send_fake_request(w_filter, addr, pkt, packetLen,
@@ -306,6 +315,7 @@ int send_fake_https_request(const HANDLE w_filter,
                                    const BYTE set_seq
                                  ) {
     int ret = 0;
+    rand_s(&iphdr_id);
     for (int i=0; i<fakes_count || i == 0; i++) {
         for (int j=0; j<fakes_resend; j++)
             if (send_fake_request(w_filter, addr, pkt, packetLen,
