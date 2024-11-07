@@ -19,6 +19,8 @@ If it works — congratulations! You can use it as-is or configure further.
 
 Download [latest version from Releases page](https://github.com/ValdikSS/GoodbyeDPI/releases) and run.
 
+## Supported arguments
+To get relevant information about your version of the program, use the -h (--help) argument at startup.
 ```
 Usage: goodbyedpi.exe [OPTION...]
  -p          block passive DPI
@@ -97,7 +99,7 @@ Modern modesets (more stable, more compatible, faster):
 
  Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.
 ```
-
+## How to check
 To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
 
 * **Chrome**: Settings → [Privacy and security](chrome://settings/security) → Use secure DNS → With: NextDNS
