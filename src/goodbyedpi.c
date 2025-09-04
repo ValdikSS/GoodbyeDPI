@@ -327,7 +327,7 @@ static HANDLE init(char *filter, UINT64 flags) {
                "Please unload it with the following commands ran as administrator:\n\n"
                "sc stop windivert\n"
                "sc delete windivert\n"
-               "sc stop windivert14"
+               "sc stop windivert14\n"
                "sc delete windivert14\n");
     else if (errorcode == 1275)
         printf("This error occurs for various reasons, including:\n"
