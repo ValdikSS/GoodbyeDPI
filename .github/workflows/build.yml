@@ -36,17 +36,17 @@ jobs:
         id: windivert-cache
         uses: actions/cache@v4
         with:
-          path: ${{ env. WINDIVERT_NAME }}
-          key: ${{ env. WINDIVERT_SHA256 }}
+          path: ${{ env.WINDIVERT_NAME }}
+          key: ${{ env.WINDIVERT_SHA256 }}
 
       - name: Download WinDivert from the website
         if: steps.windivert-cache.outputs.cache-hit != 'true'
         run: >
-          wget ${{ env. WINDIVERT_URL }} &&
-          (echo ${{ env. WINDIVERT_SHA256 }} ${{ env. WINDIVERT_NAME }} | sha256sum -c)
+          wget ${{ env.WINDIVERT_URL }} &&
+          (echo ${{ env.WINDIVERT_SHA256 }} ${{ env.WINDIVERT_NAME }} | sha256sum -c)
 
       - name: Unpack WinDivert
-        run: unzip ${{ env. WINDIVERT_NAME }}
+        run: unzip ${{ env.WINDIVERT_NAME }}
 
       - name: Compile x86_64
         run: >
