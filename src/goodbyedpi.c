@@ -149,7 +149,7 @@ enum ERROR_CODE{
 };
 
 static int running_from_service = 0;
-static int exiting = 0;
+static volatile sig_atomic_t exiting = 0;
 static HANDLE filters[MAX_FILTERS];
 static int filter_num = 0;
 static const char http10_redirect_302[] = "HTTP/1.0 302 ";
@@ -367,8 +367,6 @@ void deinit_all() {
 
 static void sigint_handler(int sig __attribute__((unused))) {
     exiting = 1;
-    deinit_all();
-    exit(EXIT_SUCCESS);
 }
 
 static void mix_case(char *pktdata, unsigned int pktlen) {
@@ -1171,8 +1169,9 @@ int main(int argc, char *argv[]) {
     }
     printf("Filter activated, GoodbyeDPI is now running!\n");
     signal(SIGINT, sigint_handler);
+    signal(SIGTERM, sigint_handler);
 
-    while (1) {
+    while (!exiting) {
         if (WinDivertRecv(w_filter, packet, sizeof(packet), &packetLen, &addr)) {
             debug("Got %s packet, len=%d!\n", addr.Outbound ? "outbound" : "inbound",
                    packetLen);
@@ -1294,7 +1293,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 /* Handle OUTBOUND packet on port 80, search for Host header */
-                else if (addr.Outbound && 
+                else if (addr.Outbound &&
                         packet_dataLen > 16 &&
                         (do_http_allports ? 1 : (ppTcpHdr->DstPort == htons(80))) &&
                         find_http_method_end(packet_data,
@@ -1560,4 +1559,6 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
+    deinit_all();
+    exit(EXIT_SUCCESS);
 }
