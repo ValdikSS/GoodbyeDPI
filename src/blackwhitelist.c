@@ -1,5 +1,5 @@
 /*
- * Blacklist for GoodbyeDPI HTTP DPI circumvention tricks
+ * Blacklist and whitelist for GoodbyeDPI HTTP DPI circumvention tricks
  *
  * This is a simple domain hash table.
  * Domain records are added from a text file, where every
@@ -71,15 +71,18 @@ static int blackwhitelist_load_list(const char *filename, blackwhitelist_record_
                 line);
             continue;
         }
-        if (strlen(line) < 2) {
-            printf("WARNING: host %s is less than 2 characters, skipping\n", line);
+        if (strlen(line) < 3) {
+            printf("WARNING: host %s is less than 3 bytes, skipping\n", line);
             continue;
         }
         if (add_hostname(line, list))
             cnt++;
     }
     free(line);
-    if (!*list) return FALSE;
+    if (!*list) {
+        fclose(fp);
+        return FALSE;
+    }
     printf("Loaded %d hosts from file %s\n", cnt, filename);
     fclose(fp);
     return TRUE;
@@ -108,7 +111,6 @@ static int blackwhitelist_check_hostname(const char *host_addr, size_t host_len,
 
     tokenized_host = strchr(current_host, '.');
     while (tokenized_host != NULL && tokenized_host < (current_host + HOST_MAXLEN)) {
-        /* Search hostname only if there is next token */
         if (strchr(tokenized_host + 1, '.') && check_get_hostname(tokenized_host + 1, list))
             return TRUE;
         tokenized_host = strchr(tokenized_host + 1, '.');

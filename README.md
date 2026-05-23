@@ -45,7 +45,7 @@ Usage: goodbyedpi.exe [OPTION...]
  --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from
                           supplied text file (HTTP Host/TLS SNI).
                           This option can be supplied multiple times.
- --whitelist   <txtfile>  does not perform circumvention tricks to host names and subdomains from
+ --whitelist   <txtfile>  do not perform circumvention tricks to host names and subdomains from
                           supplied text file.
                           This option can be supplied multiple times.
  --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.

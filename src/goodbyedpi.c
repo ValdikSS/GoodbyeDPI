@@ -177,7 +177,7 @@ static struct option long_options[] = {
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
-    {"whitelist",   required_argument, 0,  't' },
+    {"whitelist",   required_argument, 0,  'W' },
     {"allow-no-sni",no_argument,       0,  ']' },
     {"frag-by-sni", no_argument,       0,  '>' },
     {"ip-id",       required_argument, 0,  'i' },
@@ -265,6 +265,36 @@ static void finalize_filter_strings() {
     newstr = repl_str(filter_passive_string, IPID_TEMPLATE, "");
     free(filter_passive_string);
     filter_passive_string = newstr;
+}
+
+static int host_is_circumvented(int do_blacklist, int do_whitelist, int do_allow_no_sni,
+                                int sni_ok, const char *host_addr, size_t host_len) {
+    int host_blacklisted = 1;
+    int host_whitelisted = 0;
+
+    if (do_blacklist || do_whitelist) {
+        if (sni_ok) {
+            if (do_blacklist)
+                host_blacklisted = blackwhitelist_check_hostname_blacklist(host_addr, host_len);
+            if (do_whitelist)
+                host_whitelisted = blackwhitelist_check_hostname_whitelist(host_addr, host_len);
+        } else {
+            host_blacklisted = 0;
+        }
+
+        if (do_blacklist) {
+            if (!sni_ok)
+                return do_allow_no_sni;
+            return host_blacklisted && !host_whitelisted;
+        }
+
+        if (!sni_ok)
+            return 0;
+
+        return !host_whitelisted;
+    }
+
+    return 1;
 }
 
 static char* dumb_memmem(const char* haystack, unsigned int hlen,
@@ -688,7 +718,7 @@ int main(int argc, char *argv[]) {
         max_payload_size = 1200;
     }
 
-    while ((opt = getopt_long(argc, argv, "123456789pqrsaf:e:mwk:n", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "123456789pqrsaf:e:mwk:nW", long_options, NULL)) != -1) {
         switch (opt) {
             case '1':
                 do_passivedpi = do_host = do_host_removespace \
@@ -867,14 +897,14 @@ int main(int argc, char *argv[]) {
                 do_blacklist = 1;
                 if (!blackwhitelist_load_blacklist(optarg)) {
                     printf("Can't load blacklist from file!\n");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_BLACKLIST_LOAD);
                 }
                 break;
-            case 't': // --whitelist
+            case 'W': // --whitelist
                 do_whitelist = 1;
                 if (!blackwhitelist_load_whitelist(optarg)) {
                     printf("Can't load whitelist from file!\n");
-                    exit(EXIT_FAILURE);
+                    exit(ERROR_BLACKLIST_LOAD);
                 }
                 break;
             case ']': // --allow-no-sni
@@ -1003,7 +1033,7 @@ int main(int argc, char *argv[]) {
                 " --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from\n"
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
                 "                          This option can be supplied multiple times.\n"
-                " --whitelist   <txtfile>  does not perform circumvention tricks to host names and subdomains from\n"
+                " --whitelist   <txtfile>  do not perform circumvention tricks to host names and subdomains from\n"
                 "                          supplied text file.\n"
                 "                          This option can be supplied multiple times.\n"
                 " --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.\n"
@@ -1276,18 +1306,12 @@ int main(int argc, char *argv[]) {
                     if ((packet_dataLen == 2 && memcmp(packet_data, "\x16\x03", 2) == 0) ||
                         (packet_dataLen >= 3 && ( memcmp(packet_data, "\x16\x03\x01", 3) == 0 || memcmp(packet_data, "\x16\x03\x03", 3) == 0 )))
                     {
-                        if (do_blacklist || do_whitelist) {
+                        if (do_blacklist || do_whitelist || do_fragment_by_sni) {
                             sni_ok = extract_sni(packet_data, packet_dataLen,
                                         &host_addr, &host_len);
                         }
-                        if (
-                             ((do_blacklist && sni_ok &&
-                              blackwhitelist_check_hostname_blacklist(host_addr, host_len)
-                             ) ||
-                             (do_blacklist && !sni_ok && do_allow_no_sni) ||
-                             (!do_blacklist)) &&
-                             (do_whitelist ? !blackwhitelist_check_hostname_whitelist(host_addr, host_len) : 1)
-                           )
+                        if (host_is_circumvented(do_blacklist, do_whitelist, do_allow_no_sni,
+                                                  sni_ok, host_addr, host_len))
                         {
 #ifdef DEBUG
                             char lsni[HOST_MAXLEN + 1] = {0};
@@ -1322,8 +1346,8 @@ int main(int argc, char *argv[]) {
                     if (find_header_and_get_info(packet_data, packet_dataLen,
                         http_host_find, &hdr_name_addr, &hdr_value_addr, &hdr_value_len) &&
                         hdr_value_len > 0 && hdr_value_len <= HOST_MAXLEN &&
-                        (do_blacklist ? blackwhitelist_check_hostname_blacklist(hdr_value_addr, hdr_value_len) : 1) &&
-                        (do_whitelist ? !blackwhitelist_check_hostname_whitelist(hdr_value_addr, hdr_value_len) : 1))
+                        host_is_circumvented(do_blacklist, do_whitelist, 1,
+                                             1, hdr_value_addr, hdr_value_len))
                     {
                         host_addr = hdr_value_addr;
                         host_len = hdr_value_len;
