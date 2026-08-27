@@ -20,6 +20,8 @@
 #include "ttltrack.h"
 #include "blackwhitelist.h"
 #include "fakepackets.h"
+#include "acksplit.h"
+#include "qos.h"
 
 // My mingw installation does not load inet_pton definition for some reason
 WINSOCK_API_LINKAGE INT WSAAPI inet_pton(INT Family, LPCSTR pStringBuf, PVOID pAddr);
@@ -193,6 +195,11 @@ static struct option long_options[] = {
     {"fake-gen",    required_argument, 0,  'j' },
     {"fake-resend", required_argument, 0,  't' },
     {"debug-exit",  optional_argument, 0,  'x' },
+    {"ack-split",      optional_argument, 0,  '&' },
+    {"ack-split-sack", optional_argument, 0,  '^' },
+    {"ack-split-bytes",required_argument, 0,  '~' },
+    {"ack-keep-wscale",no_argument,       0,  '=' },
+    {"qos-dscp",       optional_argument, 0,  '_' },
     {0,             0,                 0,   0  }
 };
 
@@ -617,11 +624,13 @@ int main(int argc, char *argv[]) {
         do_auto_ttl = 0,
         do_wrong_chksum = 0,
         do_wrong_seq = 0,
-        do_native_frag = 0, do_reverse_frag = 0;
+        do_native_frag = 0, do_reverse_frag = 0,
+        do_qos = 0;
     unsigned int http_fragment_size = 0;
     unsigned int https_fragment_size = 0;
     unsigned int current_fragment_size = 0;
     unsigned short max_payload_size = 0;
+    uint8_t qos_dscp = 46;
     BYTE should_send_fake = 0;
     BYTE ttl_of_fake_packet = 0;
     BYTE ttl_min_nhops = 0;
@@ -971,6 +980,30 @@ int main(int argc, char *argv[]) {
             case 'x': // --debug-exit
                 debug_exit = true;
                 break;
+            case '&': /* --ack-split [size] */
+            case '^': /* --ack-split-sack [size] */
+                ack_mode = (opt == '&') ? ACK_PLAIN : ACK_SACK;
+                if (!optarg && argv[optind] && argv[optind][0] != '-')
+                    optarg = argv[optind];
+                if (optarg)
+                    ack_step_size = atousi(optarg, "ACK split size parameter error!");
+                if (ack_step_size < 8) {
+                    puts("WARNING: ack-split size < 8 is impractical, using 8");
+                    ack_step_size = 8;
+                }
+                break;
+            case '~':
+                ack_limit_bytes = strtoul(optarg, NULL, 10);
+                break;
+            case '=':
+                ack_zero_wscale = 0;
+                break;
+            case '_': /* --qos-dscp [0-63] */
+                if (!optarg && argv[optind] && argv[optind][0] != '-')
+                    optarg = argv[optind];
+                do_qos = 1;
+                qos_dscp = optarg ? (atoub(optarg, "DSCP parameter error!") & 0x3F) : 46;
+                break;
             default:
                 puts("Usage: goodbyedpi.exe [OPTION...]\n"
                 " -p          block passive DPI\n"
@@ -1032,6 +1065,11 @@ int main(int argc, char *argv[]) {
                 "                          (like file transfers) in already established sessions.\n"
                 "                          May skip some huge HTTP requests from being processed.\n"
                 "                          Default (if set): --max-payload 1200.\n"
+                " --ack-split     [size]   split incoming ACKs using plain mode (default size: 40 bytes).\n"
+                " --ack-split-sack [size]  split incoming ACKs using SACK mode (default size: 40 bytes).\n"
+                " --ack-split-bytes <N>    limit ACK splitting to first N bytes of response (0 = unlimited).\n"
+                " --ack-keep-wscale        do not zero TCP Window Scale option when ACK splitting is enabled.\n"
+                " --qos-dscp      [0-63]   set DSCP value for QoS marking on outgoing packets (default: 46/EF).\n"
                 "\n");
                 puts("LEGACY modesets:\n"
                 " -1          -p -r -s -f 2 -k 2 -n -e 2 (most compatible mode)\n"
@@ -1132,6 +1170,11 @@ int main(int argc, char *argv[]) {
     finalize_filter_strings();
     puts("\nOpening filter");
     filter_num = 0;
+
+    /* Start QoS marking if enabled */
+    if (do_qos && !qos_start(qos_dscp)) {
+        puts("WARNING: Failed to start QoS marking!");
+    }
 
     if (do_passivedpi) {
         /* IPv4 only filter for inbound RST packets with ID [0x0; 0xF] */
@@ -1439,6 +1482,13 @@ int main(int argc, char *argv[]) {
                 }
             } /* Handle TCP packet with data */
 
+            /* Handle ACK splitting for incoming TCP data packets */
+            if (packet_type == ipv4_tcp_data || packet_type == ipv6_tcp_data) {
+                if (!addr.Outbound && ack_mode != ACK_OFF) {
+                    acksplit_in_data(w_filter, &addr, ppIpHdr, ppIpV6Hdr, ppTcpHdr, packet_dataLen);
+                }
+            }
+
             /* Else if we got TCP packet without data */
             else if (packet_type == ipv4_tcp || packet_type == ipv6_tcp) {
                 /* If we got INBOUND SYN+ACK packet */
@@ -1475,6 +1525,16 @@ int main(int argc, char *argv[]) {
                             should_recalc_checksum = 1;
                         }
                     }
+                }
+                /* Handle ACK splitting for outbound SYN packets */
+                else if (addr.Outbound && ppTcpHdr->Syn == 1 && !ppTcpHdr->Ack) {
+                    int recalc = 0;
+                    if (packet_v4)
+                        acksplit_out_syn(ppTcpHdr, (uint32_t*)&ppIpHdr->SrcAddr, (uint32_t*)&ppIpHdr->DstAddr, 0, &recalc);
+                    else if (packet_v6)
+                        acksplit_out_syn(ppTcpHdr, (uint32_t*)ppIpV6Hdr->SrcAddr, (uint32_t*)ppIpV6Hdr->DstAddr, 1, &recalc);
+                    if (recalc)
+                        should_recalc_checksum = 1;
                 }
             }
 
@@ -1547,10 +1607,32 @@ int main(int argc, char *argv[]) {
 
             if (should_reinject) {
                 //printf("Re-injecting!\n");
-                if (should_recalc_checksum) {
-                    WinDivertHelperCalcChecksums(packet, packetLen, &addr, (UINT64)0LL);
+                /* Handle ACK splitting for outgoing TCP packets */
+                if ((packet_type == ipv4_tcp || packet_type == ipv6_tcp ||
+                     packet_type == ipv4_tcp_data || packet_type == ipv6_tcp_data) &&
+                    ack_mode != ACK_OFF && addr.Outbound && ppTcpHdr) {
+                    int recalc = 0;
+                    uint32_t *srcip, *dstip;
+                    if (packet_v4) {
+                        srcip = (uint32_t*)&ppIpHdr->SrcAddr;
+                        dstip = (uint32_t*)&ppIpHdr->DstAddr;
+                    }
+                    else {
+                        srcip = (uint32_t*)ppIpV6Hdr->SrcAddr;
+                        dstip = (uint32_t*)ppIpV6Hdr->DstAddr;
+                    }
+                    if (!acksplit_out(ppTcpHdr, srcip, dstip, packet_v6, packet_dataLen ? packet_dataLen : 0, &recalc)) {
+                        should_reinject = 0;
+                    }
+                    if (recalc)
+                        should_recalc_checksum = 1;
                 }
-                WinDivertSend(w_filter, packet, packetLen, NULL, &addr);
+                if (should_reinject) {
+                    if (should_recalc_checksum) {
+                        WinDivertHelperCalcChecksums(packet, packetLen, &addr, (UINT64)0LL);
+                    }
+                    WinDivertSend(w_filter, packet, packetLen, NULL, &addr);
+                }
             }
         }
         else {
