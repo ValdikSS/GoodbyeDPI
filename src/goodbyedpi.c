@@ -19,6 +19,7 @@
 #include "dnsredir.h"
 #include "ttltrack.h"
 #include "blackwhitelist.h"
+#include "presets.h"
 #include "fakepackets.h"
 
 // My mingw installation does not load inet_pton definition for some reason
@@ -145,7 +146,8 @@ enum ERROR_CODE{
     ERROR_BLACKLIST_LOAD,
     ERROR_AUTOTTL,
     ERROR_ATOUSI,
-    ERROR_AUTOB
+    ERROR_AUTOB,
+    ERROR_PRESET
 };
 
 static int running_from_service = 0;
@@ -177,6 +179,7 @@ static struct option long_options[] = {
     {"dnsv6-port",  required_argument, 0,  '@' },
     {"dns-verb",    no_argument,       0,  'v' },
     {"blacklist",   required_argument, 0,  'b' },
+    {"blacklist-builtin", required_argument, 0, 'B' },
     {"allow-no-sni",no_argument,       0,  ']' },
     {"frag-by-sni", no_argument,       0,  '>' },
     {"ip-id",       required_argument, 0,  'i' },
@@ -636,6 +639,8 @@ int main(int argc, char *argv[]) {
     char *host_addr, *useragent_addr, *method_addr;
     unsigned int host_len, useragent_len;
     int http_req_fragmented;
+    char **preset_argv = NULL;
+    int preset_argc = 0;
 
     char *hdr_name_addr = NULL, *hdr_value_addr = NULL;
     unsigned int hdr_value_len;
@@ -643,6 +648,9 @@ int main(int argc, char *argv[]) {
     // Make sure to search DLLs only in safe path, not in current working dir.
     SetDllDirectory("");
     SetSearchPathMode(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE | BASE_SEARCH_PATH_PERMANENT);
+
+    /* Output must reach a parent reading our stdout through a pipe (the TUI) right away */
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     if (!running_from_service) {
         running_from_service = 1;
@@ -672,6 +680,17 @@ int main(int argc, char *argv[]) {
         ": Passive DPI blocker and Active DPI circumvention utility\n"
         "https://github.com/ValdikSS/GoodbyeDPI\n\n"
     );
+
+    switch (presets_expand(argc, argv, &preset_argc, &preset_argv)) {
+        case PRESET_EXPANDED:
+            argc = preset_argc;
+            argv = preset_argv;
+            break;
+        case PRESET_ERROR:
+            exit(ERROR_PRESET);
+        default:
+            break;
+    }
 
     if (argc == 1) {
         /* enable mode -9 by default */
@@ -868,6 +887,13 @@ int main(int argc, char *argv[]) {
                     exit(ERROR_BLACKLIST_LOAD);
                 }
                 break;
+            case 'B': // --blacklist-builtin
+                do_blacklist = 1;
+                if (!blackwhitelist_load_builtin(optarg)) {
+                    printf("Unknown built-in blacklist: %s\n", optarg);
+                    exit(ERROR_BLACKLIST_LOAD);
+                }
+                break;
             case ']': // --allow-no-sni
                 do_allow_no_sni = 1;
                 break;
@@ -994,6 +1020,7 @@ int main(int argc, char *argv[]) {
                 " --blacklist   <txtfile>  perform circumvention tricks only to host names and subdomains from\n"
                 "                          supplied text file (HTTP Host/TLS SNI).\n"
                 "                          This option can be supplied multiple times.\n"
+                " --blacklist-builtin <name>  same as --blacklist, with a built-in list. Available: steam\n"
                 " --allow-no-sni           perform circumvention if TLS SNI can't be detected with --blacklist enabled.\n"
                 " --frag-by-sni            if SNI is detected in TLS packet, fragment the packet right before SNI value.\n"
                 " --set-ttl     <value>    activate Fake Request Mode and send it with supplied TTL value.\n"
@@ -1027,6 +1054,9 @@ int main(int argc, char *argv[]) {
                 "                          (up to 30).\n"
                 " --fake-resend <value>    Send each fake packet value number of times.\n"
                 "                          Default: 1 (send each packet once).\n"
+                " --preset     <name>     apply a ready-made option set: viettel, fpt, vnpt, steam.\n"
+                "                          Options after it are added on top (own --dns-addr overrides the preset's).\n"
+                " --list-presets           list available presets and exit.\n"
                 " --max-payload [value]    packets with TCP payload data more than [value] won't be processed.\n"
                 "                          Use this option to reduce CPU usage by skipping huge amount of data\n"
                 "                          (like file transfers) in already established sessions.\n"

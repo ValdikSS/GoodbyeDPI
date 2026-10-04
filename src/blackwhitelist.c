@@ -84,6 +84,38 @@ int blackwhitelist_load_list(const char *filename) {
     return TRUE;
 }
 
+/* Subdomains match automatically, e.g. "steamstatic.com" covers cdn.steamstatic.com */
+static const char *const builtin_steam[] = {
+    "steampowered.com",
+    "steamcommunity.com",
+    "steamstatic.com",
+    "steamcontent.com",
+    "steamusercontent.com",
+    "steamserver.net",
+    "steam-chat.com",
+    "steamgames.com",
+    "valvesoftware.com",
+    "steamcdn-a.akamaihd.net",
+    NULL
+};
+
+int blackwhitelist_load_builtin(const char *name) {
+    const char *const *hosts;
+    int cnt = 0;
+
+    if (strcmp(name, "steam") == 0)
+        hosts = builtin_steam;
+    else
+        return FALSE;
+
+    for (; *hosts; hosts++) {
+        if (add_hostname(*hosts))
+            cnt++;
+    }
+    printf("Loaded %d hosts from built-in list '%s'\n", cnt, name);
+    return TRUE;
+}
+
 int blackwhitelist_check_hostname(const char *host_addr, size_t host_len) {
     char current_host[HOST_MAXLEN + 1];
     char *tokenized_host = NULL;

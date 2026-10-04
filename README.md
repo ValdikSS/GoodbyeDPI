@@ -99,6 +99,35 @@ Modern modesets (more stable, more compatible, faster):
 
  Note: combination of --wrong-seq and --wrong-chksum generates two different fake packets.
 ```
+
+## Presets (Vietnam)
+
+```
+goodbyedpi.exe --preset <name> [extra options]
+goodbyedpi.exe --list-presets
+```
+
+| Preset    | Expands to                                                             |
+|-----------|------------------------------------------------------------------------|
+| `viettel` | `-9 --dns-addr 1.1.1.1`                                                |
+| `fpt`     | `-5 --dns-addr 8.8.8.8`                                                |
+| `vnpt`    | `-6 --dns-addr 1.1.1.1`                                                |
+| `steam`   | `-f 2 -e 2 --wrong-seq --wrong-chksum --reverse-frag --max-payload=1200 --frag-by-sni --blacklist-builtin steam --dns-addr 1.1.1.1` |
+
+The `steam` preset only touches connections to Steam domains (`--blacklist-builtin steam`), the rest of your traffic is left alone. The ISP presets apply to all traffic.
+
+Options placed after `--preset` are added on top; your own `--dns-addr` replaces the preset's one.
+
+**These are starting points, not guarantees.** Which mode works depends on your ISP, modem/router and changes over time. If a preset does not work, try another one (the ISP presets intentionally use different fake-packet modes), and use [blockcheck](https://github.com/ValdikSS/blockcheck) to find what works on your line. Presets only redirect plain UDP DNS: if your ISP intercepts DNS to 1.1.1.1/8.8.8.8 as well, use DNS-over-HTTPS in your browser. Steam game traffic over UDP is not handled by this tool.
+
+### TUI launcher
+
+`goodbyedpi-tui.exe` (next to `goodbyedpi.exe`) is a keyboard-driven menu on top of the presets: choose a preset, DNS server, QUIC blocking and verbose DNS log, see the resulting command line, and press Start. Up/Down moves, Left/Right changes a value, Space/Enter selects, Q quits. Ctrl+C stops goodbyedpi and returns to the menu.
+
+With **Minimize to tray** turned on, Start runs goodbyedpi.exe hidden, closes the console once it reports it is running, and leaves an icon in the notification area. Right-click the icon and choose *Exit and stop GoodbyeDPI* to stop it. goodbyedpi.exe is also stopped if the launcher is killed. If it starts but later dies on its own, the icon shows a notification. Only one tray instance can run at a time. When goodbyedpi stops (Exit from the tray, or the foreground run ending) the launcher also stops and removes the WinDivert driver service, so `WinDivert64.sys` is not left locked ("file in use"); WinDivert loads it again on the next start. If another program is still using WinDivert, the driver is left alone. To skip the menu, for example from a shortcut: `goodbyedpi-tui.exe --tray steam` (preset name optional).
+
+Note: if the tray icon is missing, check the hidden-icons arrow (^) next to the clock. Requires Windows 10 or newer and administrator rights (it asks for elevation, like goodbyedpi.exe).
+
 ## How to check
 To check if your ISP's DPI could be circumvented, first make sure that your provider does not poison DNS answers by enabling "Secure DNS (DNS over HTTPS)" option in your browser.
 
@@ -150,6 +179,17 @@ And for x86_64:
 Check examples in `service_install_russia_blacklist.cmd`, `service_install_russia_blacklist_dnsredir.cmd` and `service_remove.cmd` scripts.
 
 Modify them according to your own needs.
+
+# Signing the executables for your own machine
+
+`tools/sign-selfsigned.ps1` signs `goodbyedpi.exe` and `goodbyedpi-tui.exe` with a self-signed certificate (created in your user store, private key never exported). `tools/trust-selfsigned.ps1` (run as Administrator) makes your machine trust it; `-Remove` undoes that.
+
+```powershell
+.\tools\sign-selfsigned.ps1 -Folder .\dist
+.\tools\trust-selfsigned.ps1        # elevated PowerShell
+```
+
+A self-signed certificate is only trusted where you install it, so it does not help other people who download the files. SmartScreen reputation and Smart App Control are decided by Microsoft from trusted publishers, which a self-signed certificate is not. For files you downloaded yourself, `Unblock-File .\dist\*` removes the "downloaded from the internet" mark that triggers SmartScreen.
 
 # Known issues
 

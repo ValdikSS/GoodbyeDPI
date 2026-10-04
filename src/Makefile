@@ -38,7 +38,9 @@ endif
 
 .PHONY: default all clean
 
-default: $(TARGET)
+TUI_TARGET = goodbyedpi-tui.exe
+
+default: $(TARGET) $(TUI_TARGET)
 all: default
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c utils/*.c)) goodbyedpi-rc.o
@@ -55,6 +57,13 @@ goodbyedpi-rc.o:
 $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -s -o $@
 
+tui/tui-rc.o: tui/tui-rc.rc tui/tui.exe.manifest
+	$(CCWINDRES) -I tui -I . tui/tui-rc.rc tui/tui-rc.o
+
+# The TUI launcher does not use WinDivert, it only starts goodbyedpi.exe.
+$(TUI_TARGET): tui/tui.c tui/tui-rc.o
+	$(CC) -std=c99 -pie -fPIE -O2 -Wall -Wextra -Wpedantic tui/tui.c tui/tui-rc.o $(LDFLAGS) -l:libssp.a -luser32 -lshell32 -ladvapi32 -s -o $@
+
 clean:
-	-rm -f *.o utils/*.o
-	-rm -f $(TARGET)
+	-rm -f *.o utils/*.o tui/*.o
+	-rm -f $(TARGET) $(TUI_TARGET)

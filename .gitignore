@@ -1,2 +1,8 @@
 *.o
 *.exe
+
+# signing material and local build output
+*.pfx
+*.p12
+*.cer
+dist/
